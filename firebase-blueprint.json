@@ -1,0 +1,202 @@
+{
+  "entities": {
+    "Member": {
+      "title": "Member",
+      "description": "Information about land project members.",
+      "type": "object",
+      "properties": {
+        "memberId": {
+          "type": "string",
+          "description": "Unique member identifier."
+        },
+        "name": {
+          "type": "string",
+          "description": "Member's full name."
+        },
+        "fatherName": {
+          "type": "string"
+        },
+        "motherName": {
+          "type": "string"
+        },
+        "mobile": {
+          "type": "string"
+        },
+        "whatsapp": {
+          "type": "string"
+        },
+        "nid": {
+          "type": "string"
+        },
+        "birthDate": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "profession": {
+          "type": "string"
+        },
+        "joiningDate": {
+          "type": "string"
+        },
+        "nominee": {
+          "type": "string"
+        },
+        "nomineeMobile": {
+          "type": "string"
+        },
+        "photo": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "Inactive"]
+        },
+        "remarks": {
+          "type": "string"
+        }
+      },
+      "required": ["memberId", "name", "mobile", "status"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Records of members' financial transactions.",
+      "type": "object",
+      "properties": {
+        "receiptNo": {
+          "type": "string",
+          "description": "Unique receipt number."
+        },
+        "memberId": {
+          "type": "string"
+        },
+        "memberName": {
+          "type": "string"
+        },
+        "month": {
+          "type": "string"
+        },
+        "year": {
+          "type": "integer"
+        },
+        "paymentType": {
+          "type": "string",
+          "enum": ["Monthly Deposit", "Registration Fee", "Meeting Fee", "Fine", "Donation", "Other"]
+        },
+        "amount": {
+          "type": "number"
+        },
+        "entryDate": {
+          "type": "string"
+        },
+        "remarks": {
+          "type": "string"
+        }
+      },
+      "required": ["receiptNo", "memberId", "paymentType", "amount", "entryDate"]
+    },
+    "BankDeposit": {
+      "title": "BankDeposit",
+      "description": "Bank deposit slips recorded by management.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "bankName": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "slipNumber": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "remarks": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "date", "bankName", "amount", "slipNumber"]
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "Global settings for Al-Baraka Smart Management System.",
+      "type": "object",
+      "properties": {
+        "monthlyAmount": {
+          "type": "number"
+        },
+        "registrationFee": {
+          "type": "number"
+        },
+        "meetingFee": {
+          "type": "number"
+        },
+        "fine": {
+          "type": "number"
+        },
+        "orgName": {
+          "type": "string"
+        },
+        "orgSlogan": {
+          "type": "string"
+        },
+        "orgMobile": {
+          "type": "string"
+        },
+        "orgEmail": {
+          "type": "string"
+        },
+        "orgAddress": {
+          "type": "string"
+        },
+        "founderName": {
+          "type": "string"
+        },
+        "founderMobile": {
+          "type": "string"
+        },
+        "founderDesignation": {
+          "type": "string"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "founderPhoto": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/members/{memberId}": {
+      "schema": "Member",
+      "description": "Land project member directory."
+    },
+    "/payments/{receiptNo}": {
+      "schema": "Payment",
+      "description": "Financial records of receipts."
+    },
+    "/bankDeposits/{depositId}": {
+      "schema": "BankDeposit",
+      "description": "Records of bank deposit slips."
+    },
+    "/settings/{settingsId}": {
+      "schema": "SystemSettings",
+      "description": "App configuration settings."
+    }
+  }
+}

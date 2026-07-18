@@ -1,0 +1,6 @@
+{
+  "name": "Al-Baraka Smart Management System",
+  "description": "একটি আধুনিক ও প্রফেশনাল ল্যান্ড প্রকল্প ম্যানেজমেন্ট সফটওয়্যার (আল-বারাকা ভূমি প্রকল্প) যা স্বয়ংক্রিয় সঞ্চয় আদায়, রশিদ জেনারেশন, এবং পূর্ণ হিসেবপত্র পরিচালনা করে।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

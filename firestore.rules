@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // allow read and write on all collections used in the application
+    match /settings/{document} {
+      allow read, write: if true;
+    }
+    match /members/{document} {
+      allow read, write: if true;
+    }
+    match /payments/{document} {
+      allow read, write: if true;
+    }
+    match /bankDeposits/{document} {
+      allow read, write: if true;
+    }
+  }
+}
