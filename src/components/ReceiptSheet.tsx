@@ -252,7 +252,6 @@ ${settings.orgName}`;
               </div>
             </div>
 
-            {/* Bottom Footer block containing signatures, QR code verification link */}
             {/* Bottom Footer block containing 3 authority signatures, customer signature, and QR code */}
             <div className="grid grid-cols-5 gap-2 items-end mt-12 border-t border-slate-100 pt-6">
               {/* Column 1: QR Code section */}
@@ -281,7 +280,7 @@ ${settings.orgName}`;
               <div className="text-center relative">
                 {/* Embedded Digital Signature image */}
                 <div className="absolute top-[-25px] left-1/2 transform -translate-x-1/2 w-16 h-8 pointer-events-none opacity-90">
-                  <img src={settings.signature} alt="Signature" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  <img src={settings.collectorSignature || settings.signature} alt="Signature" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </div>
                 {/* Embedded Digital Stamp */}
                 <div className="absolute top-[-35px] right-0 w-11 h-11 border border-emerald-600/30 text-emerald-600/30 rounded-full flex items-center justify-center text-[5px] font-bold rotate-12 pointer-events-none select-none">
@@ -289,37 +288,31 @@ ${settings.orgName}`;
                 </div>
                 
                 <div className="h-10 border-b border-dashed border-slate-300 w-22 mx-auto"></div>
-                <p className="text-[9px] text-primary mt-1 font-bold">আদায়কারী</p>
+                <p className="text-[9px] text-primary mt-1 font-bold">{settings.collectorName || settings.founderName || 'আদায়কারী'}</p>
                 <p className="text-[7px] text-slate-400 leading-none">রশিদ ইস্যুকারী</p>
               </div>
 
               {/* Column 4: Treasurer Signature Column */}
               <div className="text-center relative">
-                {/* Simulated digital ink signature for treasurer in orange color */}
-                <div className="absolute top-[-22px] left-1/2 transform -translate-x-1/2 w-16 h-8 pointer-events-none opacity-85">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" className="w-full h-full">
-                    <path d="M 10 32 Q 25 15, 45 35 T 85 22 Q 92 18, 70 30" fill="none" stroke="#ea580c" strokeWidth="2.5" />
-                    <path d="M 15 28 L 75 28" fill="none" stroke="#ea580c" strokeWidth="1" opacity="0.4" />
-                  </svg>
+                {/* Simulated digital ink signature for treasurer */}
+                <div className="absolute top-[-25px] left-1/2 transform -translate-x-1/2 w-16 h-8 pointer-events-none opacity-90">
+                  <img src={settings.treasurerSignature} alt="Treasurer Signature" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </div>
                 
                 <div className="h-10 border-b border-dashed border-slate-300 w-22 mx-auto"></div>
-                <p className="text-[9px] text-slate-700 mt-1 font-extrabold">রাকিবুল হাসান (শিপন)</p>
+                <p className="text-[9px] text-slate-700 mt-1 font-extrabold">{settings.treasurerName || 'রাকিবুল হাসান (শিপন)'}</p>
                 <p className="text-[7px] text-slate-400 leading-none">কোষাধ্যক্ষ</p>
               </div>
 
               {/* Column 5: President/Founder Signature Column */}
               <div className="text-center relative">
-                {/* Simulated digital ink signature for president in emerald color */}
-                <div className="absolute top-[-22px] left-1/2 transform -translate-x-1/2 w-16 h-8 pointer-events-none opacity-85">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" className="w-full h-full">
-                    <path d="M 15 35 Q 35 12, 55 35 T 88 24 Q 95 20, 75 28" fill="none" stroke="#047857" strokeWidth="2.5" />
-                    <circle cx="55" cy="25" r="2.5" fill="#047857" />
-                  </svg>
+                {/* Simulated digital ink signature for president */}
+                <div className="absolute top-[-25px] left-1/2 transform -translate-x-1/2 w-16 h-8 pointer-events-none opacity-90">
+                  <img src={settings.presidentSignature} alt="President Signature" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </div>
                 
                 <div className="h-10 border-b border-dashed border-slate-300 w-22 mx-auto"></div>
-                <p className="text-[9px] text-slate-700 mt-1 font-extrabold">প্রকৌশলী মোঃ তানভীন</p>
+                <p className="text-[9px] text-slate-700 mt-1 font-extrabold">{settings.presidentName || 'প্রকৌশলী মোঃ তানভীন'}</p>
                 <p className="text-[7px] text-slate-400 leading-none">সভাপতি</p>
               </div>
             </div>

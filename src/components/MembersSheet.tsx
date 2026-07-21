@@ -47,6 +47,7 @@ export default function MembersSheet({
   const [nomineeMobile, setNomineeMobile] = useState('');
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
   const [remarks, setRemarks] = useState('');
+  const [photo, setPhoto] = useState('');
 
   // Handle Edit click
   const startEdit = (m: Member) => {
@@ -66,6 +67,7 @@ export default function MembersSheet({
     setNomineeMobile(m.nomineeMobile);
     setStatus(m.status);
     setRemarks(m.remarks);
+    setPhoto(m.photo || '');
     setShowAddForm(true);
   };
 
@@ -87,6 +89,7 @@ export default function MembersSheet({
     setNomineeMobile('');
     setStatus('Active');
     setRemarks('');
+    setPhoto('');
     setShowAddForm(false);
   };
 
@@ -130,7 +133,8 @@ export default function MembersSheet({
       nominee: nominee.trim(),
       nomineeMobile: nomineeMobile.trim() || mobile.trim(),
       status,
-      remarks: remarks.trim()
+      remarks: remarks.trim(),
+      photo: photo || undefined
     };
 
     if (editingMemberId) {
@@ -369,7 +373,7 @@ export default function MembersSheet({
             </div>
 
             {/* Field 15: Remarks */}
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-1">
               <label className="block text-xs font-semibold text-slate-600 mb-1">মন্তব্য (Remarks)</label>
               <input
                 type="text"
@@ -378,6 +382,40 @@ export default function MembersSheet({
                 placeholder="সদস্য সম্পর্কে অতিরিক্ত তথ্য"
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary"
               />
+            </div>
+
+            {/* Field 16: Member Photo */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-primary mb-1">সদস্যের ছবি আপলোড (Photo - Max 1MB)</label>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                  {photo ? (
+                    <img src={photo} alt="Member preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="text-[10px] text-slate-400 font-bold">ছবি নাই</div>
+                  )}
+                </div>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 1024 * 1024) {
+                        alert("ভুল! ফাইলের সাইজ খুব বড় (সর্বোচ্চ ১ মেগাবایت)। অনুগ্রহ করে ছোট সাইজের ছবি আপলোড করুন।");
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        setPhoto(event.target?.result as string);
+                        alert("সদস্যের ছবি সফলভাবে যুক্ত করা হয়েছে!");
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                />
+              </div>
             </div>
           </div>
 
@@ -487,7 +525,18 @@ export default function MembersSheet({
                     <td className="p-3 text-center font-bold text-primary font-mono">{m.memberId}</td>
                     
                     {/* Member Name */}
-                    <td className="p-3 font-semibold text-slate-900">{m.name}</td>
+                    <td className="p-3 font-semibold text-slate-900">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full border border-slate-200 overflow-hidden bg-slate-50 flex-shrink-0 flex items-center justify-center">
+                          {m.photo ? (
+                            <img src={m.photo} alt={m.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="text-[7px] text-slate-400 font-bold">X</div>
+                          )}
+                        </div>
+                        <span>{m.name}</span>
+                      </div>
+                    </td>
                     
                     {/* Father Name */}
                     <td className="p-3 text-slate-500">{m.fatherName}</td>

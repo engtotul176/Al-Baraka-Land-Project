@@ -152,6 +152,16 @@ export const DEFAULT_SIGNATURE_SVG = `data:image/svg+xml;utf8,<svg xmlns="http:/
   <path d="M 20,60 C 40,30 45,20 50,45 C 55,70 65,80 70,55 C 75,30 80,40 85,50 C 90,60 100,65 110,45 C 120,25 125,75 130,60 C 135,45 145,40 155,50 L 175,55 M 35,50 L 55,25 M 65,55 L 140,55 C 160,55 180,65 160,70 C 140,75 80,75 90,72" fill="none" stroke="%23000000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
 </svg>`;
 
+export const DEFAULT_TREASURER_SIGNATURE_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
+  <path d="M 10 32 Q 25 15, 45 35 T 85 22 Q 92 18, 70 30" fill="none" stroke="%23ea580c" stroke-width="2.5" />
+  <path d="M 15 28 L 75 28" fill="none" stroke="%23ea580c" stroke-width="1" opacity="0.4" />
+</svg>`;
+
+export const DEFAULT_PRESIDENT_SIGNATURE_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
+  <path d="M 15 35 Q 35 12, 55 35 T 88 24 Q 95 20, 75 28" fill="none" stroke="%23047857" stroke-width="2.5" />
+  <circle cx="55" cy="25" r="2.5" fill="%23047857" />
+</svg>`;
+
 export const INITIAL_MEMBERS_RAW = [
   { sNo: 1, name: "প্রকৌশলী মোঃ তানভীন আহমেদ টুটুল", mobile: "01672965561" },
   { sNo: 2, name: "মোঃ রুমান", mobile: "01735449806" },
@@ -348,6 +358,12 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   logo: DEFAULT_LOGO_SVG,
   founderPhoto: DEFAULT_FOUNDER_SVG,
   signature: DEFAULT_SIGNATURE_SVG,
+  collectorName: "আদায়কারী",
+  collectorSignature: DEFAULT_SIGNATURE_SVG,
+  treasurerName: "রাকিবুল হাসান (শিপন)",
+  treasurerSignature: DEFAULT_TREASURER_SIGNATURE_SVG,
+  presidentName: "প্রকৌশলী মোঃ তানভীন",
+  presidentSignature: DEFAULT_PRESIDENT_SIGNATURE_SVG,
   firebaseApiKey: "",
   firebaseAuthDomain: "",
   firebaseProjectId: "",

@@ -22,7 +22,8 @@ import {
   AlertCircle, 
   HelpCircle, 
   Key, 
-  Lock 
+  Lock,
+  Users
 } from 'lucide-react';
 
 interface SettingsSheetProps {
@@ -172,7 +173,7 @@ export default function SettingsSheet({
   };
 
   // Convert File to base64 string for storage
-  const handleImageUpload = (key: 'logo' | 'founderPhoto' | 'signature', e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (key: 'logo' | 'founderPhoto' | 'signature' | 'collectorSignature' | 'treasurerSignature' | 'presidentSignature', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -483,6 +484,109 @@ export default function SettingsSheet({
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-400"
                 disabled={!isAdmin}
               />
+            </div>
+          </div>
+
+          <h3 className="font-bold text-sm text-primary border-b border-slate-100 pb-2 flex items-center gap-1.5 pt-4">
+            <Users size={16} />
+            রশিদের স্বাক্ষরকারী ও হিসাব পরিচালনাকারীগণ (Signatories & Operators)
+          </h3>
+
+          <div className="space-y-4">
+            {/* Operator 1: Collector */}
+            <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-100 space-y-3">
+              <p className="text-xs font-bold text-slate-700">১. আদায়কারী / রশিদ ইস্যুকারী (Collector)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">আদায়কারীর নাম</label>
+                  <input
+                    type="text"
+                    value={settings.collectorName || ''}
+                    placeholder="আদায়কারী"
+                    onChange={(e) => handleChange('collectorName', e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">আদায়কারীর ডিজিটাল স্বাক্ষর</label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-14 h-8 bg-white border border-slate-200 rounded overflow-hidden p-0.5 flex items-center justify-center">
+                      <img src={settings.collectorSignature || settings.signature} alt="Collector Signature" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => handleImageUpload('collectorSignature', e)}
+                      disabled={!isAdmin}
+                      className="text-[10px] file:mr-1 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Operator 2: Treasurer */}
+            <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-100 space-y-3">
+              <p className="text-xs font-bold text-slate-700">২. কোষাধ্যক্ষ (Treasurer)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">কোষাধ্যক্ষের নাম</label>
+                  <input
+                    type="text"
+                    value={settings.treasurerName || ''}
+                    placeholder="রাকিবুল হাসান (শিপন)"
+                    onChange={(e) => handleChange('treasurerName', e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">কোষাধ্যক্ষের ডিজিটাল স্বাক্ষর</label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-14 h-8 bg-white border border-slate-200 rounded overflow-hidden p-0.5 flex items-center justify-center">
+                      <img src={settings.treasurerSignature} alt="Treasurer Signature" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => handleImageUpload('treasurerSignature', e)}
+                      disabled={!isAdmin}
+                      className="text-[10px] file:mr-1 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Operator 3: President */}
+            <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-100 space-y-3">
+              <p className="text-xs font-bold text-slate-700">৩. সভাপতি (President)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">সভাপতির নাম</label>
+                  <input
+                    type="text"
+                    value={settings.presidentName || ''}
+                    placeholder="প্রকৌশলী মোঃ তানভীন"
+                    onChange={(e) => handleChange('presidentName', e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">সভাপতির ডিজিটাল স্বাক্ষর</label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-14 h-8 bg-white border border-slate-200 rounded overflow-hidden p-0.5 flex items-center justify-center">
+                      <img src={settings.presidentSignature} alt="President Signature" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => handleImageUpload('presidentSignature', e)}
+                      disabled={!isAdmin}
+                      className="text-[10px] file:mr-1 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

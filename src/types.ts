@@ -70,6 +70,12 @@ export interface SystemSettings {
   logo: string; // base64 or SVG data URL
   founderPhoto: string; // base64 or SVG data URL
   signature: string; // base64 or SVG data URL
+  collectorName?: string;
+  collectorSignature?: string;
+  treasurerName?: string;
+  treasurerSignature?: string;
+  presidentName?: string;
+  presidentSignature?: string;
   firebaseApiKey?: string;
   firebaseAuthDomain?: string;
   firebaseProjectId?: string;
