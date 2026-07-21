@@ -6,7 +6,8 @@
 import React, { useState } from 'react';
 import { Member, Payment, SystemSettings } from '../types';
 import { toBanglaDigits, formatCurrencyBangla } from '../utils';
-import { FileChartLine, Calendar, Award, AlertTriangle, Printer, ArrowRight, Eye } from 'lucide-react';
+import { FileChartLine, Calendar, Award, AlertTriangle, Printer, ArrowRight, Eye, Edit2, Trash2 } from 'lucide-react';
+import EditPaymentModal from './EditPaymentModal';
 
 interface ReportsSheetProps {
   members: Member[];
@@ -15,6 +16,9 @@ interface ReportsSheetProps {
   onSelectTab: (tab: string) => void;
   onSelectReceipt: (receiptNo: string) => void;
   onSelectMemberLedger: (memberId: string) => void;
+  isAdmin?: boolean;
+  onDeletePayment?: (receiptNo: string) => void;
+  onUpdatePayment?: (payment: Payment) => void;
 }
 
 const MONTHS_LIST = [
@@ -38,9 +42,16 @@ export default function ReportsSheet({
   settings,
   onSelectTab,
   onSelectReceipt,
-  onSelectMemberLedger
+  onSelectMemberLedger,
+  isAdmin = true,
+  onDeletePayment,
+  onUpdatePayment
 }: ReportsSheetProps) {
   const [reportSubTab, setReportSubTab] = useState<'monthly' | 'yearly' | 'dues'>('monthly');
+
+  // Edit Modal States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPaymentToEdit, setSelectedPaymentToEdit] = useState<Payment | null>(null);
 
   // Filter States
   const [selectedMonth, setSelectedMonth] = useState('June');
@@ -233,6 +244,7 @@ export default function ReportsSheet({
                       <th className="p-3">খাত</th>
                       <th className="p-3 text-right">পরিমাণ</th>
                       <th className="p-3 no-print text-center">রশিদ</th>
+                      {isAdmin && <th className="p-3 no-print text-center">অ্যাকশন</th>}
                     </tr>
                   </thead>
                   <tbody className="text-xs divide-y divide-slate-100 text-slate-700">
@@ -260,11 +272,39 @@ export default function ReportsSheet({
                               রশিদ দেখুন <ArrowRight size={12} />
                             </button>
                           </td>
+                          {isAdmin && (
+                            <td className="p-3 text-center no-print flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setSelectedPaymentToEdit(p);
+                                  setIsEditModalOpen(true);
+                                }}
+                                title="সম্পাদনা করুন"
+                                className="p-1.5 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (onDeletePayment) {
+                                    const confirm = window.confirm(`আপনি কি নিশ্চিতভাবে এই রশিদটি (রশিদ নং: ${p.receiptNo}, পরিমাণ: ${formatCurrencyBangla(p.amount)}) মুছে ফেলতে চান?`);
+                                    if (confirm) {
+                                      onDeletePayment(p.receiptNo);
+                                    }
+                                  }
+                                }}
+                                title="মুছে ফেলুন"
+                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-slate-400">
+                        <td colSpan={isAdmin ? 8 : 7} className="p-8 text-center text-slate-400">
                           এই মাসে কোনো পেমেন্ট পাওয়া যায়নি।
                         </td>
                       </tr>
@@ -476,6 +516,25 @@ export default function ReportsSheet({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Payment Modal */}
+      {isEditModalOpen && selectedPaymentToEdit && (
+        <EditPaymentModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedPaymentToEdit(null);
+          }}
+          payment={selectedPaymentToEdit}
+          members={members}
+          onSave={(updated) => {
+            if (onUpdatePayment) {
+              onUpdatePayment(updated);
+              alert("পেমেন্ট সফলভাবে সংশোধন করা হয়েছে!");
+            }
+          }}
+        />
       )}
     </div>
   );

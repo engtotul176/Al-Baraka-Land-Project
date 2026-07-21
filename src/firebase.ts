@@ -345,6 +345,26 @@ export async function syncSingleItem(
   }
 }
 
+export async function deleteSingleItem(
+  settings: SystemSettings,
+  collectionName: 'members' | 'payments' | 'bankDeposits',
+  docId: string
+): Promise<void> {
+  if (!settings.firebaseSyncEnabled) return;
+  
+  const firebaseInstance = initFirebase(settings);
+  if (!firebaseInstance) return;
+
+  const { db } = firebaseInstance;
+  try {
+    const docRef = doc(db, collectionName, docId);
+    await withTimeout(deleteDoc(docRef), 6000);
+    console.log(`Successfully deleted single item from Firestore: ${collectionName}/${docId}`);
+  } catch (err) {
+    console.error(`Failed to delete single item ${collectionName}/${docId} from Firestore:`, err);
+  }
+}
+
 export async function testFirebaseConnection(settings: SystemSettings): Promise<{ success: boolean; message: string }> {
   const firebaseInstance = initFirebase(settings);
   if (!firebaseInstance) {

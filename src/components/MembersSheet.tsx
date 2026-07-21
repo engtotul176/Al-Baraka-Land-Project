@@ -6,12 +6,13 @@
 import React, { useState } from 'react';
 import { Member } from '../types';
 import { toBanglaDigits } from '../utils';
-import { Search, UserPlus, Edit2, Check, X, ShieldAlert, FileSpreadsheet, Eye, UserX } from 'lucide-react';
+import { Search, UserPlus, Edit2, Check, X, ShieldAlert, FileSpreadsheet, Eye, UserX, Trash2 } from 'lucide-react';
 
 interface MembersSheetProps {
   members: Member[];
   onAddMember: (member: Member) => void;
   onUpdateMember: (member: Member) => void;
+  onDeleteMember?: (memberId: string) => void;
   onSelectTab: (tab: string) => void;
   onSelectMemberLedger: (memberId: string) => void;
   isAdmin?: boolean;
@@ -21,6 +22,7 @@ export default function MembersSheet({
   members,
   onAddMember,
   onUpdateMember,
+  onDeleteMember,
   onSelectTab,
   onSelectMemberLedger,
   isAdmin = true
@@ -444,13 +446,30 @@ export default function MembersSheet({
                     {/* Action buttons */}
                     <td className="p-3 text-center flex items-center justify-center gap-1.5">
                       {isAdmin && (
-                        <button
-                          onClick={() => startEdit(m)}
-                          title="সম্পাদনা করুন"
-                          className="p-1.5 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                        >
-                          <Edit2 size={13} />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => startEdit(m)}
+                            title="সম্পাদনা করুন"
+                            className="p-1.5 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (onDeleteMember) {
+                                const confirm = window.confirm(`আপনি কি নিশ্চিতভাবে এই সদস্যকে (আইডি: ${m.memberId}, নাম: ${m.name}) মুছে ফেলতে চান? এর ফলে এই সদস্যের প্রোফাইল এবং আদায়ের সকল হিসাব চিরতরে মুছে যাবে।`);
+                                if (confirm) {
+                                  onDeleteMember(m.memberId);
+                                  alert("সদস্য এবং তার আদায়ের তথ্য সফলভাবে মুছে ফেলা হয়েছে!");
+                                }
+                              }
+                            }}
+                            title="মুছে ফেলুন"
+                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() => {

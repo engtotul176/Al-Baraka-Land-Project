@@ -192,12 +192,14 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
   const [memberFormDesg, setMemberFormDesg] = useState('');
   const [memberFormMobile, setMemberFormMobile] = useState('');
   const [memberFormPhoto, setMemberFormPhoto] = useState('');
+  const [isAddingMember, setIsAddingMember] = useState(false);
 
   const [editingSigId, setEditingSigId] = useState<string | null>(null);
   const [sigFormName, setSigFormName] = useState('');
   const [sigFormDesg, setSigFormDesg] = useState('');
   const [sigFormMobile, setSigFormMobile] = useState('');
   const [sigFormPhoto, setSigFormPhoto] = useState('');
+  const [isAddingSig, setIsAddingSig] = useState(false);
 
   // 1. Load initial states from LocalStorage
   useEffect(() => {
@@ -315,14 +317,35 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
       return;
     }
 
-    const updated = committee.map(m => 
-      m.id === editingMemberId 
-        ? { ...m, name: memberFormName, designation: memberFormDesg, mobile: memberFormMobile, photo: memberFormPhoto } 
-        : m
-    );
-    saveCommittee(updated);
-    setEditingMemberId(null);
-    alert("সদস্য তথ্য সফলভাবে এডিট হয়েছে!");
+    if (isAddingMember) {
+      const newMember: CommitteeMember = {
+        id: `c-${Date.now()}`,
+        name: memberFormName,
+        designation: memberFormDesg,
+        mobile: memberFormMobile,
+        photo: memberFormPhoto || createAvatarSvg('%23475569', 'MEMBER')
+      };
+      saveCommittee([...committee, newMember]);
+      setIsAddingMember(false);
+      alert("নতুন কমিটি সদস্য সফলভাবে যোগ করা হয়েছে!");
+    } else {
+      const updated = committee.map(m => 
+        m.id === editingMemberId 
+          ? { ...m, name: memberFormName, designation: memberFormDesg, mobile: memberFormMobile, photo: memberFormPhoto } 
+          : m
+      );
+      saveCommittee(updated);
+      setEditingMemberId(null);
+      alert("সদস্য তথ্য সফলভাবে এডিট হয়েছে!");
+    }
+  };
+
+  const handleDeleteMember = (id: string) => {
+    if (window.confirm("আপনি কি নিশ্চিতভাবে এই কমিটি সদস্যকে তালিকা থেকে মুছে ফেলতে চান?")) {
+      const updated = committee.filter(m => m.id !== id);
+      saveCommittee(updated);
+      alert("সদস্য তথ্য সফলভাবে মুছে ফেলা হয়েছে!");
+    }
   };
 
   // 4. Bank Signatories operations
@@ -341,14 +364,35 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
       return;
     }
 
-    const updated = signatories.map(s => 
-      s.id === editingSigId 
-        ? { ...s, name: sigFormName, designation: sigFormDesg, mobile: sigFormMobile, photo: sigFormPhoto } 
-        : s
-    );
-    saveSignatories(updated);
-    setEditingSigId(null);
-    alert("ব্যাংক পরিচালনা সদস্যের তথ্য এডিট হয়েছে!");
+    if (isAddingSig) {
+      const newSig: BankSignatory = {
+        id: `s-${Date.now()}`,
+        name: sigFormName,
+        designation: sigFormDesg,
+        mobile: sigFormMobile,
+        photo: sigFormPhoto || createAvatarSvg('%23475569', 'SIGN')
+      };
+      saveSignatories([...signatories, newSig]);
+      setIsAddingSig(false);
+      alert("নতুন ব্যাংক স্বাক্ষরকারী সদস্য সফলভাবে যোগ করা হয়েছে!");
+    } else {
+      const updated = signatories.map(s => 
+        s.id === editingSigId 
+          ? { ...s, name: sigFormName, designation: sigFormDesg, mobile: sigFormMobile, photo: sigFormPhoto } 
+          : s
+      );
+      saveSignatories(updated);
+      setEditingSigId(null);
+      alert("ব্যাংক পরিচালনা সদস্যের তথ্য এডিট হয়েছে!");
+    }
+  };
+
+  const handleDeleteSig = (id: string) => {
+    if (window.confirm("আপনি কি নিশ্চিতভাবে এই ব্যাংক স্বাক্ষরকারী সদস্যকে মুছে ফেলতে চান?")) {
+      const updated = signatories.filter(s => s.id !== id);
+      saveSignatories(updated);
+      alert("স্বাক্ষরকারী সদস্য সফলভাবে মুছে ফেলা হয়েছে!");
+    }
   };
 
   // File Upload base64 transformer
@@ -609,7 +653,117 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
               </div>
             </div>
 
-            {/* Grid display for 9 members */}
+            {/* Admin Add Committee Member Button & Block */}
+            {isAdmin && (
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                {!isAddingMember ? (
+                  <button
+                    onClick={() => {
+                      setIsAddingMember(true);
+                      setMemberFormName('');
+                      setMemberFormDesg('');
+                      setMemberFormMobile('');
+                      setMemberFormPhoto(createAvatarSvg('%23047857', 'MEMBER'));
+                    }}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer border-0 shadow-sm transition-colors"
+                  >
+                    <Plus size={15} />
+                    নতুন কমিটি সদস্য যোগ করুন
+                  </button>
+                ) : (
+                  <form onSubmit={handleMemberSubmit} className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                      <h3 className="text-sm font-bold text-primary flex items-center gap-1">
+                        <Users size={16} className="text-gold" />
+                        নতুন কমিটি সদস্য যুক্ত করুন
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingMember(false)}
+                        className="text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    {/* Photo input with preview */}
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-emerald-600/10 shadow-inner flex-shrink-0 bg-slate-50">
+                        <img src={memberFormPhoto} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5">ছবি আপলোড (১.৫ MB সর্বোচ্চ)</label>
+                        <div className="relative inline-block">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handlePhotoUpload(e, 'member')}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <div className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border border-slate-200">
+                            <Upload size={14} />
+                            ছবি নির্বাচন করুন
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                      <div className="space-y-1.5">
+                        <label className="block font-bold text-slate-600 text-xs">নাম (বাংলা)*</label>
+                        <input
+                          type="text"
+                          value={memberFormName}
+                          onChange={(e) => setMemberFormName(e.target.value)}
+                          placeholder="উদা: মোঃ আরমান হোসেন"
+                          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block font-bold text-slate-600 text-xs">পদবী / রোল*</label>
+                        <input
+                          type="text"
+                          value={memberFormDesg}
+                          onChange={(e) => setMemberFormDesg(e.target.value)}
+                          placeholder="উদা: দপ্তর সম্পাদক (Office Secretary)"
+                          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block font-bold text-slate-600 text-xs">মোবাইল নম্বর</label>
+                        <input
+                          type="text"
+                          value={memberFormMobile}
+                          onChange={(e) => setMemberFormMobile(e.target.value)}
+                          placeholder="উদা: 01701633900"
+                          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingMember(false)}
+                        className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all border-0"
+                      >
+                        বাতিল
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-light rounded-xl transition-all border-0 shadow-sm"
+                      >
+                        সদস্য যুক্ত করুন
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* Grid display for members */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {committee.map(member => {
                 const isEditingThis = editingMemberId === member.id;
@@ -733,13 +887,20 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
 
                         {/* Admin actions inside Card */}
                         {isAdmin && (
-                          <div className="bg-slate-50/50 px-5 py-2.5 border-t border-slate-100 flex justify-end">
+                          <div className="bg-slate-50/50 px-5 py-2.5 border-t border-slate-100 flex justify-end gap-2">
                             <button
                               onClick={() => startEditMember(member)}
                               className="px-3 py-1 bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer border border-primary/10"
                             >
                               <Edit2 size={11} />
                               এডিট করুন
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMember(member.id)}
+                              className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer border border-rose-200"
+                            >
+                              <Trash2 size={11} />
+                              মুছে ফেলুন
                             </button>
                           </div>
                         )}
@@ -764,7 +925,117 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
               </div>
             </div>
 
-            {/* Grid display for 3 signatories */}
+            {/* Admin Add Bank Signatory Button & Block */}
+            {isAdmin && (
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                {!isAddingSig ? (
+                  <button
+                    onClick={() => {
+                      setIsAddingSig(true);
+                      setSigFormName('');
+                      setSigFormDesg('');
+                      setSigFormMobile('');
+                      setSigFormPhoto(createAvatarSvg('%230369a1', 'SIGN'));
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer border-0 shadow-sm transition-colors"
+                  >
+                    <Plus size={15} />
+                    নতুন ব্যাংক স্বাক্ষরকারী সদস্য যোগ করুন
+                  </button>
+                ) : (
+                  <form onSubmit={handleSigSubmit} className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                      <h3 className="text-sm font-bold text-primary flex items-center gap-1">
+                        <Landmark size={16} className="text-gold" />
+                        নতুন ব্যাংক স্বাক্ষরকারী পরিচালনা সদস্য যুক্ত করুন
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingSig(false)}
+                        className="text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    {/* Photo input with preview */}
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-blue-600/10 shadow-inner flex-shrink-0 bg-slate-50">
+                        <img src={sigFormPhoto} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5">ছবি আপলোড (১.৫ MB সর্বোচ্চ)</label>
+                        <div className="relative inline-block">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handlePhotoUpload(e, 'sig')}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <div className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border border-slate-200">
+                            <Upload size={14} />
+                            ছবি নির্বাচন করুন
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                      <div className="space-y-1.5">
+                        <label className="block font-bold text-slate-600 text-xs">নাম (বাংলা)*</label>
+                        <input
+                          type="text"
+                          value={sigFormName}
+                          onChange={(e) => setSigFormName(e.target.value)}
+                          placeholder="উদা: রাকিবুল হাসান (শিপন)"
+                          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block font-bold text-slate-600 text-xs">পদবী / রোল*</label>
+                        <input
+                          type="text"
+                          value={sigFormDesg}
+                          onChange={(e) => setSigFormDesg(e.target.value)}
+                          placeholder="উদা: কোষাধ্যক্ষ ও ৩য় স্বাক্ষরকারী"
+                          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block font-bold text-slate-600 text-xs">মোবাইল নম্বর</label>
+                        <input
+                          type="text"
+                          value={sigFormMobile}
+                          onChange={(e) => setSigFormMobile(e.target.value)}
+                          placeholder="উদা: 01911919786"
+                          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingSig(false)}
+                        className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all border-0"
+                      >
+                        বাতিল
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-light rounded-xl transition-all border-0 shadow-sm"
+                      >
+                        স্বাক্ষরকারী যুক্ত করুন
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* Grid display for signatories */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {signatories.map(sig => {
                 const isEditingThis = editingSigId === sig.id;
@@ -888,13 +1159,20 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
 
                         {/* Admin actions */}
                         {isAdmin && (
-                          <div className="bg-slate-50/50 px-5 py-3 border-t border-slate-100 flex justify-center">
+                          <div className="bg-slate-50/50 px-5 py-3 border-t border-slate-100 flex justify-center gap-3">
                             <button
                               onClick={() => startEditSig(sig)}
                               className="px-4 py-1.5 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer border border-primary/10 shadow-sm"
                             >
                               <Edit2 size={12} />
                               এডিট করুন
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSig(sig.id)}
+                              className="px-4 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer border border-rose-200 shadow-sm"
+                            >
+                              <Trash2 size={12} />
+                              মুছে ফেলুন
                             </button>
                           </div>
                         )}

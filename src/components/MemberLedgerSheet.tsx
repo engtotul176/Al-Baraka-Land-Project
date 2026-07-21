@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Member, Payment, SystemSettings } from '../types';
 import { toBanglaDigits, formatCurrencyBangla } from '../utils';
-import { FileText, Printer, CheckCircle, AlertTriangle, Landmark, Compass, Eye } from 'lucide-react';
+import { FileText, Printer, CheckCircle, AlertTriangle, Landmark, Compass, Eye, Edit2, Trash2 } from 'lucide-react';
+import EditPaymentModal from './EditPaymentModal';
 
 interface MemberLedgerSheetProps {
   members: Member[];
@@ -17,6 +18,9 @@ interface MemberLedgerSheetProps {
   onSelectTab: (tab: string) => void;
   onSelectReceipt: (receiptNo: string) => void;
   isLockedToMember?: boolean;
+  isAdmin?: boolean;
+  onDeletePayment?: (receiptNo: string) => void;
+  onUpdatePayment?: (payment: Payment) => void;
 }
 
 export default function MemberLedgerSheet({
@@ -27,9 +31,16 @@ export default function MemberLedgerSheet({
   onSelectMemberId,
   onSelectTab,
   onSelectReceipt,
-  isLockedToMember = false
+  isLockedToMember = false,
+  isAdmin = true,
+  onDeletePayment,
+  onUpdatePayment
 }: MemberLedgerSheetProps) {
   
+  // Edit Modal States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPaymentToEdit, setSelectedPaymentToEdit] = useState<Payment | null>(null);
+
   // Active member object
   const activeMember = members.find(m => m.memberId === selectedMemberId) || null;
 
@@ -253,6 +264,7 @@ export default function MemberLedgerSheet({
                       <th className="p-3">হিসাব মাস</th>
                       <th className="p-3">মন্তব্য</th>
                       <th className="p-3 text-center no-print">রশিদ</th>
+                      {isAdmin && <th className="p-3 no-print text-center">অ্যাকশন</th>}
                     </tr>
                   </thead>
                   <tbody className="text-xs divide-y divide-slate-100 text-slate-700">
@@ -283,11 +295,39 @@ export default function MemberLedgerSheet({
                               <Eye size={12} /> রশিদে যান
                             </button>
                           </td>
+                          {isAdmin && (
+                            <td className="p-3 text-center no-print flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setSelectedPaymentToEdit(p);
+                                  setIsEditModalOpen(true);
+                                }}
+                                title="সম্পাদনা করুন"
+                                className="p-1.5 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (onDeletePayment) {
+                                    const confirm = window.confirm(`আপনি কি নিশ্চিতভাবে এই রশিদটি (রশিদ নং: ${p.receiptNo}, পরিমাণ: ${formatCurrencyBangla(p.amount)}) মুছে ফেলতে চান?`);
+                                    if (confirm) {
+                                      onDeletePayment(p.receiptNo);
+                                    }
+                                  }
+                                }}
+                                title="মুছে ফেলুন"
+                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-slate-400">
+                        <td colSpan={isAdmin ? 8 : 7} className="p-8 text-center text-slate-400">
                           কোনো লেনদেন রেকর্ড পাওয়া যায়নি।
                         </td>
                       </tr>
@@ -308,6 +348,25 @@ export default function MemberLedgerSheet({
         <div className="bg-white p-12 text-center text-slate-400 rounded-2xl border border-slate-100 shadow-sm">
           খতিয়ান দেখার জন্য অনুগ্রহ করে উপর থেকে কোনো একজন সদস্য সিলেক্ট করুন।
         </div>
+      )}
+
+      {/* Edit Payment Modal */}
+      {isEditModalOpen && selectedPaymentToEdit && (
+        <EditPaymentModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedPaymentToEdit(null);
+          }}
+          payment={selectedPaymentToEdit}
+          members={members}
+          onSave={(updated) => {
+            if (onUpdatePayment) {
+              onUpdatePayment(updated);
+              alert("পেমেন্ট সফলভাবে সংশোধন করা হয়েছে!");
+            }
+          }}
+        />
       )}
     </div>
   );

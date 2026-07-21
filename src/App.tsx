@@ -9,10 +9,11 @@ import {
   getInitialMembers, 
   getInitialPayments, 
   getInitialBankDeposits, 
-  DEFAULT_SETTINGS 
+  DEFAULT_SETTINGS,
+  DEFAULT_LOGO_SVG 
 } from './initialData';
 import { exportToExcel, toBanglaDigits, formatCurrencyBangla } from './utils';
-import { isFirebaseConfigured, downloadAllFromFirebase, syncSingleItem, uploadAllToFirebase } from './firebase';
+import { isFirebaseConfigured, downloadAllFromFirebase, syncSingleItem, uploadAllToFirebase, deleteSingleItem } from './firebase';
 
 // Sub Components Imports
 import DashboardSheet from './components/DashboardSheet';
@@ -224,6 +225,12 @@ export default function App() {
           };
         }
       }
+      
+      // Auto-upgrade stale/default logo in local state to the gorgeous new custom circular Bengali logo
+      if (baseSettings && (!baseSettings.logo || baseSettings.logo.includes('al-baraka-smart') || baseSettings.logo.includes('Courier New') || !baseSettings.logo.includes('Circular Green Background'))) {
+        baseSettings.logo = DEFAULT_LOGO_SVG;
+      }
+
       activeSettings = baseSettings;
       setSettings(activeSettings);
       localStorage.setItem('ab_settings', JSON.stringify(activeSettings));
@@ -306,11 +313,44 @@ export default function App() {
     }
   };
 
+  const handleDeleteMember = (memberId: string) => {
+    const updatedMembers = members.filter(m => m.memberId !== memberId);
+    saveMembers(updatedMembers);
+    
+    const updatedPayments = payments.filter(p => p.memberId !== memberId);
+    savePayments(updatedPayments);
+
+    if (settings.firebaseSyncEnabled) {
+      deleteSingleItem(settings, 'members', memberId);
+      const deletedPayments = payments.filter(p => p.memberId === memberId);
+      deletedPayments.forEach(p => {
+        deleteSingleItem(settings, 'payments', p.receiptNo).catch(() => {});
+      });
+    }
+  };
+
   const handleAddPayment = (p: Payment) => {
     const updated = [p, ...payments];
     savePayments(updated);
     if (settings.firebaseSyncEnabled) {
       syncSingleItem(settings, 'payments', p.receiptNo, p);
+    }
+  };
+
+  const handleDeletePayment = (receiptNo: string) => {
+    const updated = payments.filter(p => p.receiptNo !== receiptNo);
+    savePayments(updated);
+    if (settings.firebaseSyncEnabled) {
+      deleteSingleItem(settings, 'payments', receiptNo);
+    }
+    alert("পেমেন্ট রেকর্ডটি সফলভাবে মুছে ফেলা হয়েছে!");
+  };
+
+  const handleUpdatePayment = (updatedPayment: Payment) => {
+    const updated = payments.map(p => p.receiptNo === updatedPayment.receiptNo ? updatedPayment : p);
+    savePayments(updated);
+    if (settings.firebaseSyncEnabled) {
+      syncSingleItem(settings, 'payments', updatedPayment.receiptNo, updatedPayment);
     }
   };
 
@@ -841,6 +881,7 @@ export default function App() {
               members={members}
               onAddMember={handleAddMember}
               onUpdateMember={handleUpdateMember}
+              onDeleteMember={handleDeleteMember}
               onSelectTab={setActiveTab}
               onSelectMemberLedger={setSelectedLedgerMemberId}
               isAdmin={isAdmin}
@@ -888,6 +929,9 @@ export default function App() {
               onSelectTab={setActiveTab}
               onSelectReceipt={setSelectedReceiptNo}
               isLockedToMember={loggedInUser?.role === 'member'}
+              isAdmin={isAdmin}
+              onDeletePayment={handleDeletePayment}
+              onUpdatePayment={handleUpdatePayment}
             />
           )}
 
@@ -899,6 +943,9 @@ export default function App() {
               onSelectTab={setActiveTab}
               onSelectReceipt={setSelectedReceiptNo}
               onSelectMemberLedger={setSelectedLedgerMemberId}
+              isAdmin={isAdmin}
+              onDeletePayment={handleDeletePayment}
+              onUpdatePayment={handleUpdatePayment}
             />
           )}
 
