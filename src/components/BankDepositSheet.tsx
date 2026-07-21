@@ -6,12 +6,14 @@
 import React, { useState } from 'react';
 import { BankDeposit, Payment } from '../types';
 import { toBanglaDigits, formatCurrencyBangla } from '../utils';
-import { Landmark, ArrowRight, CheckCircle2, ShieldAlert, Plus, Wallet } from 'lucide-react';
+import { Landmark, ArrowRight, CheckCircle2, ShieldAlert, Plus, Wallet, Edit2, Trash2, Camera, X, Image } from 'lucide-react';
 
 interface BankDepositSheetProps {
   bankDeposits: BankDeposit[];
   payments: Payment[];
   onAddBankDeposit: (deposit: BankDeposit) => void;
+  onUpdateBankDeposit: (deposit: BankDeposit) => void;
+  onDeleteBankDeposit: (id: string) => void;
   isAdmin?: boolean;
 }
 
@@ -19,23 +21,44 @@ export default function BankDepositSheet({
   bankDeposits,
   payments,
   onAddBankDeposit,
+  onUpdateBankDeposit,
+  onDeleteBankDeposit,
   isAdmin = true
 }: BankDepositSheetProps) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingDepositId, setEditingDepositId] = useState<string | null>(null);
+  const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
   
   // Form State
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [bankName, setBankName] = useState('ইসলামী ব্যাংক বাংলাদেশ লিমিটেড');
-  const [branch, setBranch] = useState('মিরপুর শাখা');
+  const [bankName, setBankName] = useState('জনতা ব্যাংক পিএলসি');
+  const [branch, setBranch] = useState('ময়মনসিংহ শাখা');
   const [amount, setAmount] = useState<number | string>('');
   const [slipNumber, setSlipNumber] = useState('');
   const [reference, setReference] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [slipPhoto, setSlipPhoto] = useState<string>('');
 
   // Math summary
   const totalCashCollected = payments.reduce((sum, p) => sum + p.amount, 0);
   const totalDeposited = bankDeposits.reduce((sum, b) => sum + b.amount, 0);
   const cashInHand = totalCashCollected - totalDeposited;
+
+  const handleSlipPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1.5 * 1024 * 1024) {
+      alert("ফাইলের সাইজ অনেক বড়! অনুগ্রহ করে ১.৫ MB এর চেয়ে ছোট ছবি আপলোড করুন।");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSlipPhoto(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,31 +67,72 @@ export default function BankDepositSheet({
       return;
     }
 
-    if (Number(amount) > cashInHand) {
-      const confirmProceed = window.confirm(`সতর্কতা: আপনার ক্যাশ ইন হ্যান্ড ফান্ডে আছে ${formatCurrencyBangla(cashInHand)}। আপনি ব্যাংক ডিপোজিট করছেন ${formatCurrencyBangla(Number(amount))}। এটি ক্যাশ তহবিলের চেয়ে বেশি। তাও কি জমা করতে চান?`);
+    // Adjust validation if editing vs adding
+    const currentDepositAmount = editingDepositId 
+      ? (bankDeposits.find(d => d.id === editingDepositId)?.amount || 0) 
+      : 0;
+    const adjustedCashInHand = cashInHand + currentDepositAmount;
+
+    if (Number(amount) > adjustedCashInHand) {
+      const confirmProceed = window.confirm(`সতর্কতা: আপনার ক্যাশ ইন হ্যান্ড ফান্ডে আছে ${formatCurrencyBangla(adjustedCashInHand)}। আপনি ব্যাংক ডিপোজিট করছেন ${formatCurrencyBangla(Number(amount))}। এটি ক্যাশ তহবিলের চেয়ে বেশি। তাও কি জমা করতে চান?`);
       if (!confirmProceed) return;
     }
 
     const payload: BankDeposit = {
-      id: `BD-${String(bankDeposits.length + 1).padStart(4, '0')}`,
+      id: editingDepositId || `BD-${String(bankDeposits.length + 1).padStart(4, '0')}`,
       date,
       bankName: bankName.trim(),
       branch: branch.trim(),
       amount: Number(amount),
       slipNumber: slipNumber.trim(),
       reference: reference.trim() || 'মাসিক সঞ্চয় তহবিল স্থানান্তর',
-      remarks: remarks.trim()
+      remarks: remarks.trim(),
+      slipPhoto: slipPhoto || undefined
     };
 
-    onAddBankDeposit(payload);
-    alert("ব্যাংক ডিপোজিট সফলভাবে নথিভুক্ত করা হয়েছে!");
+    if (editingDepositId) {
+      onUpdateBankDeposit(payload);
+      alert("ডিপোজিট সফলভাবে আপডেট করা হয়েছে!");
+    } else {
+      onAddBankDeposit(payload);
+      alert("ব্যাংক ডিপোজিট সফলভাবে নথিভুক্ত করা হয়েছে!");
+    }
     
     // Reset form
+    handleCancelEdit();
+  };
+
+  const handleStartEdit = (b: BankDeposit) => {
+    setEditingDepositId(b.id);
+    setDate(b.date);
+    setBankName(b.bankName);
+    setBranch(b.branch);
+    setAmount(b.amount);
+    setSlipNumber(b.slipNumber);
+    setReference(b.reference);
+    setRemarks(b.remarks);
+    setSlipPhoto(b.slipPhoto || '');
+    setShowAddForm(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    const confirmDelete = window.confirm("আপনি কি নিশ্চিতভাবে এই ব্যাংক ডিপোজিট রেকর্ডটি মুছে ফেলতে চান?");
+    if (confirmDelete) {
+      onDeleteBankDeposit(id);
+      alert("ব্যাংক ডিপোজিট সফলভাবে মুছে ফেলা হয়েছে!");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDepositId(null);
     setDate(new Date().toISOString().split('T')[0]);
+    setBankName('জনতা ব্যাংক পিএলসি');
+    setBranch('ময়মনসিংহ শাখা');
     setAmount('');
     setSlipNumber('');
     setReference('');
     setRemarks('');
+    setSlipPhoto('');
     setShowAddForm(false);
   };
 
@@ -87,7 +151,13 @@ export default function BankDepositSheet({
         </div>
         {isAdmin && (
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => {
+              if (showAddForm) {
+                handleCancelEdit();
+              } else {
+                setShowAddForm(true);
+              }
+            }}
             className="px-4 py-2.5 bg-primary hover:bg-primary-light text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
           >
             {showAddForm ? 'রেজিস্টার দেখুন' : <Plus size={16} />}
@@ -134,7 +204,7 @@ export default function BankDepositSheet({
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border-l-4 border-gold shadow-sm space-y-4 animate-fade-in">
           <h3 className="font-bold text-primary text-sm border-b border-slate-100 pb-2 flex items-center gap-1.5">
             <ShieldAlert size={16} className="text-gold" />
-            ব্যাংক ডিপোজিট এন্ট্রি ফরম
+            {editingDepositId ? 'ব্যাংক ডিপোজিট তথ্য সংশোধন' : 'ব্যাংক ডিপোজিট এন্ট্রি ফরম'}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -157,7 +227,7 @@ export default function BankDepositSheet({
                 type="text"
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                placeholder="যেমন: ইসলামী ব্যাংক বাংলাদেশ পিএলসি"
+                placeholder="যেমন: জনতা ব্যাংক পিএলসি"
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary"
                 required
               />
@@ -170,7 +240,7 @@ export default function BankDepositSheet({
                 type="text"
                 value={branch}
                 onChange={(e) => setBranch(e.target.value)}
-                placeholder="যেমন: মিরপুর শাখা"
+                placeholder="যেমন: ময়মনসিংহ শাখা"
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-primary"
                 required
               />
@@ -231,21 +301,62 @@ export default function BankDepositSheet({
             />
           </div>
 
+          {/* Field: Deposit Slip Photo */}
+          <div className="space-y-1.5 pt-2">
+            <label className="block text-xs font-bold text-slate-600">জমা স্লিপ সংযুক্ত করুন (Upload Deposit Slip - Optional)</label>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200">
+              <div className="relative inline-block">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSlipPhotoUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border border-slate-200 shadow-sm transition-all">
+                  <Camera size={14} className="text-primary" />
+                  স্লিপ ছবি আপলোড করুন
+                </div>
+              </div>
+              
+              {slipPhoto ? (
+                <div className="flex items-center gap-3">
+                  <div className="relative w-16 h-16 rounded-lg border border-slate-200 overflow-hidden bg-white">
+                    <img src={slipPhoto} alt="Slip Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <button
+                      type="button"
+                      onClick={() => setSlipPhoto('')}
+                      className="absolute top-0.5 right-0.5 p-1 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition-colors border-0"
+                      title="ছবি বাদ দিন"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                  <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
+                    <CheckCircle2 size={12} />
+                    স্লিপ সফলভাবে সংযুক্ত হয়েছে!
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs text-slate-400">কোনো স্লিপ সংযুক্ত করা হয়নি (ঐচ্ছিক)।</span>
+              )}
+            </div>
+          </div>
+
           {/* Submit */}
           <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4 mt-3">
             <button
               type="button"
-              onClick={() => setShowAddForm(false)}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              onClick={handleCancelEdit}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer border-0"
             >
               বাতিল করুন
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-primary hover:bg-primary-light text-white text-xs font-semibold rounded-xl flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
+              className="px-5 py-2 bg-primary hover:bg-primary-light text-white text-xs font-semibold rounded-xl flex items-center gap-1 shadow-sm transition-colors cursor-pointer border-0"
             >
               <ArrowRight size={14} />
-              ডিপোজিট সফল করুন
+              {editingDepositId ? 'সংশোধন সম্পন্ন করুন' : 'ডিপোজিট সফল করুন'}
             </button>
           </div>
         </form>
@@ -268,6 +379,8 @@ export default function BankDepositSheet({
                   <th className="p-3 text-center">স্লিপ নম্বর</th>
                   <th className="p-3">রেফারেন্স</th>
                   <th className="p-3">মন্তব্য</th>
+                  <th className="p-3 text-center">জমা স্লিপ</th>
+                  {isAdmin && <th className="p-3 text-center">অ্যাকশন</th>}
                 </tr>
               </thead>
               <tbody className="text-xs divide-y divide-slate-100 text-slate-700">
@@ -284,17 +397,78 @@ export default function BankDepositSheet({
                       <td className="p-3 text-center font-mono font-semibold text-slate-600">{toBanglaDigits(b.slipNumber)}</td>
                       <td className="p-3">{b.reference || '―'}</td>
                       <td className="p-3 text-slate-400 truncate max-w-[150px]" title={b.remarks}>{b.remarks || '―'}</td>
+                      <td className="p-3 text-center">
+                        {b.slipPhoto ? (
+                          <button
+                            onClick={() => setViewingPhotoUrl(b.slipPhoto!)}
+                            className="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold rounded-lg flex items-center justify-center gap-1 mx-auto transition-colors border border-emerald-200 cursor-pointer text-[10px]"
+                          >
+                            <Image size={12} />
+                            স্লিপ দেখুন
+                          </button>
+                        ) : (
+                          <span className="text-slate-400">―</span>
+                        )}
+                      </td>
+                      {isAdmin && (
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => handleStartEdit(b)}
+                              className="p-1 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer border-0"
+                              title="সম্পাদনা করুন"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(b.id)}
+                              className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border-0"
+                              title="মুছে ফেলুন"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-400">
+                    <td colSpan={isAdmin ? 9 : 8} className="p-8 text-center text-slate-400">
                       কোনো ব্যাংক ডিপোজিট রেকর্ড পাওয়া যায়নি।
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Slip Zoom Modal */}
+      {viewingPhotoUrl && (
+        <div className="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setViewingPhotoUrl(null)}>
+          <div className="bg-white rounded-2xl max-w-xl w-full p-4 space-y-3 relative shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                <Image size={14} className="text-gold" />
+                সংযুক্ত জমা স্লিপ (Bank Deposit Slip)
+              </span>
+              <button onClick={() => setViewingPhotoUrl(null)} className="text-slate-400 hover:text-slate-600 p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg cursor-pointer border-0">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="aspect-auto max-h-[70vh] overflow-auto rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 p-2">
+              <img src={viewingPhotoUrl} alt="Bank Deposit Slip" className="max-w-full max-h-[65vh] object-contain rounded-xl" referrerPolicy="no-referrer" />
+            </div>
+            <div className="text-center pt-2">
+              <button 
+                onClick={() => setViewingPhotoUrl(null)}
+                className="px-5 py-2 bg-primary hover:bg-primary-light text-white font-bold text-xs rounded-xl cursor-pointer border-0 shadow-sm"
+              >
+                বন্ধ করুন
+              </button>
+            </div>
           </div>
         </div>
       )}

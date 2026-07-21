@@ -51,6 +51,7 @@ export interface BankDeposit {
   slipNumber: string;
   reference: string;
   remarks: string;
+  slipPhoto?: string; // base64 representation of deposit slip
 }
 
 export interface SystemSettings {

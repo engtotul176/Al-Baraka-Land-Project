@@ -302,8 +302,8 @@ export const getInitialBankDeposits = (): BankDeposit[] => {
     {
       id: "BD-0001",
       date: "2026-01-20",
-      bankName: "ইসলামী ব্যাংক বাংলাদেশ লিমিটেড",
-      branch: "মিরপুর শাখা",
+      bankName: "জনতা ব্যাংক পিএলসি",
+      branch: "ময়মনসিংহ শাখা",
       amount: 45000,
       slipNumber: "SL-92817",
       reference: "ব্যাংক জমা - জানুয়ারি সঞ্চয়",
@@ -312,8 +312,8 @@ export const getInitialBankDeposits = (): BankDeposit[] => {
     {
       id: "BD-0002",
       date: "2026-03-10",
-      bankName: "ইসলামী ব্যাংক বাংলাদেশ লিমিটেড",
-      branch: "মিরপুর শাখা",
+      bankName: "জনতা ব্যাংক পিএলসি",
+      branch: "ময়মনসিংহ শাখা",
       amount: 60000,
       slipNumber: "SL-94012",
       reference: "ব্যাংক জমা - ফেব্রুয়ারি ও মার্চ",
@@ -322,8 +322,8 @@ export const getInitialBankDeposits = (): BankDeposit[] => {
     {
       id: "BD-0003",
       date: "2026-05-15",
-      bankName: "ইসলামী ব্যাংক বাংলাদেশ লিমিটেড",
-      branch: "মিরপুর শাখা",
+      bankName: "জনতা ব্যাংক পিএলসি",
+      branch: "ময়মনসিংহ শাখা",
       amount: 80000,
       slipNumber: "SL-96120",
       reference: "ব্যাংক জমা - এপ্রিল ও মে",

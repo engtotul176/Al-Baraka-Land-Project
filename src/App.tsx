@@ -362,6 +362,22 @@ export default function App() {
     }
   };
 
+  const handleUpdateBankDeposit = (b: BankDeposit) => {
+    const updated = bankDeposits.map(old => old.id === b.id ? b : old);
+    saveDeposits(updated);
+    if (settings.firebaseSyncEnabled) {
+      syncSingleItem(settings, 'bankDeposits', b.id, b);
+    }
+  };
+
+  const handleDeleteBankDeposit = (id: string) => {
+    const updated = bankDeposits.filter(b => b.id !== id);
+    saveDeposits(updated);
+    if (settings.firebaseSyncEnabled) {
+      deleteSingleItem(settings, 'bankDeposits', id);
+    }
+  };
+
   const handleUpdateSettings = (s: SystemSettings) => {
     const wasSyncEnabled = settings.firebaseSyncEnabled;
     saveSettings(s);
@@ -915,6 +931,8 @@ export default function App() {
               bankDeposits={bankDeposits}
               payments={payments}
               onAddBankDeposit={handleAddBankDeposit}
+              onUpdateBankDeposit={handleUpdateBankDeposit}
+              onDeleteBankDeposit={handleDeleteBankDeposit}
               isAdmin={isAdmin}
             />
           )}

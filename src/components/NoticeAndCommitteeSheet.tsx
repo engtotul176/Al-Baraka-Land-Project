@@ -74,7 +74,7 @@ const DEFAULT_NOTICES: Notice[] = [
   {
     id: 'notice-3',
     title: 'ব্যাংক হিসাব ও স্বচ্ছতার বিবরণী প্রকাশ',
-    content: 'আমাদের প্রকল্পের সকল লেনদেন ইসলামী ব্যাংক বাংলাদেশ লিমিটেড, মিরপুর শাখার হিসাব নম্বরের মাধ্যমে পরিচালিত হচ্ছে। সকল ব্যাংক জমা স্লিপ ও হিসাব বিবরণী সরাসরি "আর্থিক রিপোর্ট" ট্যাব থেকে দেখতে পারবেন।',
+    content: 'আমাদের প্রকল্পের সকল লেনদেন জনতা ব্যাংক পিএলসি, ময়মনসিংহ শাখার হিসাব নম্বর: ০১০০২৯৪২৭৮৫৫৩ এর মাধ্যমে পরিচালিত হচ্ছে। সকল ব্যাংক জমা স্লিপ ও হিসাব বিবরণী সরাসরি "আর্থিক রিপোর্ট" ট্যাব থেকে দেখতে পারবেন।',
     date: '2026-03-01',
     category: 'General',
     active: true
@@ -112,7 +112,7 @@ const DEFAULT_COMMITTEE: CommitteeMember[] = [
   },
   {
     id: 'c-5',
-    name: 'রাকিবুল হাসান (シップন)',
+    name: 'রাকিবুল হাসান (শিপন)',
     designation: 'কোষাধ্যক্ষ (Treasurer)',
     mobile: '01911919786',
     photo: createAvatarSvg('%23ea580c', 'TREASURER')
@@ -150,24 +150,24 @@ const DEFAULT_COMMITTEE: CommitteeMember[] = [
 const DEFAULT_SIGNATORIES: BankSignatory[] = [
   {
     id: 's-1',
-    name: 'প্রকৌশলী মোঃ তানভীন আহমেদ টুটুল',
+    name: 'প্রকৌশলী মোঃ তানভীন আহমেদ',
     designation: 'সভাপতি ও ১ম স্বাক্ষরকারী (Account Signatory 1)',
     mobile: '01672965561',
     photo: createAvatarSvg('%23047857', 'SIGN-1')
   },
   {
     id: 's-2',
-    name: 'মোঃ মাহমুদুল হক (সোহেল)',
-    designation: 'সাধারণ সম্পাদক ও ২য় স্বাক্ষরকারী (Account Signatory 2)',
-    mobile: '0172284662',
-    photo: createAvatarSvg('%237c3aed', 'SIGN-2')
+    name: 'মোঃ রুমান',
+    designation: 'সহ-সভাপতি ও ২য় স্বাক্ষরকারী (Account Signatory 2)',
+    mobile: '01735449806',
+    photo: createAvatarSvg('%230369a1', 'SIGN-2')
   },
   {
     id: 's-3',
-    name: 'রাকিবুল হাসান (শিপন)',
-    designation: 'কোষাধ্যক্ষ ও ৩য় স্বাক্ষরকারী (Account Signatory 3)',
-    mobile: '01911919786',
-    photo: createAvatarSvg('%23ea580c', 'SIGN-3')
+    name: 'মোঃ মাহমুদুল হক',
+    designation: 'সাধারণ সম্পাদক ও ৩য় স্বাক্ষরকারী (Account Signatory 3)',
+    mobile: '0172284662',
+    photo: createAvatarSvg('%237c3aed', 'SIGN-3')
   }
 ];
 
@@ -921,7 +921,7 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
               <Landmark className="text-blue-700 flex-shrink-0 mt-0.5" size={16} />
               <div>
                 <p className="font-bold text-slate-800">ব্যাংক পরিচালনা সদস্য (Authorized Signatories)</p>
-                <p className="text-slate-500 mt-1">ইসলামী ব্যাংক বাংলাদেশ লিমিটেড, মিরপুর শাখা এর "আল-বারাকা" অ্যাকাউন্টটি যৌথভাবে পরিচালনার জন্য নির্ধারিত ৩ জন স্বাক্ষরকারী সদস্য।</p>
+                <p className="text-slate-500 mt-1">জনতা ব্যাংক পিএলসি, ময়মনসিংহ শাখা এর হিসাব নম্বর: ০১০০২৯৪২৭৮৫৫৩ "আল-বারাকা" অ্যাকাউন্টটি যৌথভাবে পরিচালনার জন্য নির্ধারিত ৩ জন স্বাক্ষরকারী সদস্য।</p>
               </div>
             </div>
 
