@@ -12,6 +12,19 @@ export function toBanglaDigits(num: string | number): string {
   return String(num).replace(/\d/g, (digit) => banglaDigits[parseInt(digit, 10)]);
 }
 
+// Get Today's Date dynamically in Bangla
+export function getTodayBanglaDate(): string {
+  const date = new Date();
+  const day = date.getDate();
+  const monthsBangla = [
+    "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
+    "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"
+  ];
+  const month = monthsBangla[date.getMonth()];
+  const year = date.getFullYear();
+  return `${toBanglaDigits(day)} ${month}, ${toBanglaDigits(year)}`;
+}
+
 // Convert English numbers into English digits or formatted currency (Bangla-themed)
 export function formatCurrencyBangla(amount: number): string {
   const formatted = new Intl.NumberFormat('en-IN', {

@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Member, Payment, BankDeposit } from '../types';
-import { toBanglaDigits, formatCurrencyBangla } from '../utils';
+import { toBanglaDigits, formatCurrencyBangla, getTodayBanglaDate } from '../utils';
 import { Users, Landmark, Wallet, Layers, AlertCircle, ArrowUpRight, TrendingUp, Calendar, BadgeCheck } from 'lucide-react';
 
 interface DashboardSheetProps {
@@ -100,7 +100,7 @@ export default function DashboardSheet({
         </div>
         <div className="bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/20 text-center md:text-right">
           <p className="text-xs text-gray-300">আজকের তারিখ (সিস্টেম)</p>
-          <p className="text-lg font-bold text-gold mt-0.5 font-mono">{toBanglaDigits("১৬ জুলাই, ২০২৬")}</p>
+          <p className="text-lg font-bold text-gold mt-0.5 font-mono">{getTodayBanglaDate()}</p>
         </div>
       </div>
 
