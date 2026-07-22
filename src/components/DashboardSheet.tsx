@@ -69,12 +69,21 @@ export default function DashboardSheet({
   );
   const dueMembersCount = Math.max(0, activeMembers - activePaidCurrentMonth.size);
 
-  // Last Collection Details: Sort by entry date and receipt number so the absolute latest posted payment is shown
+  // Last Collection Details: Sort by year and receipt sequence descending so the latest posted payment always appears first
   const sortedPayments = [...payments].sort((a, b) => {
-    if (b.entryDate !== a.entryDate) {
-      return b.entryDate.localeCompare(a.entryDate);
+    if (a.year !== b.year) {
+      return b.year - a.year;
     }
-    return b.receiptNo.localeCompare(a.receiptNo);
+    const getSeq = (p: Payment) => {
+      const match = p.receiptNo.match(/\d+$/);
+      return match ? parseInt(match[0], 10) : 0;
+    };
+    const seqA = getSeq(a);
+    const seqB = getSeq(b);
+    if (seqA !== seqB) {
+      return seqB - seqA;
+    }
+    return b.entryDate.localeCompare(a.entryDate);
   });
   const lastPayment = sortedPayments[0];
 
