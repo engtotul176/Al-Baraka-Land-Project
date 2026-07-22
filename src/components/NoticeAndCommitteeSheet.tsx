@@ -6,6 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Users, Landmark, Plus, Trash2, Edit2, Save, X, Upload, Calendar, Bell, Shield, Phone } from 'lucide-react';
 import { toBanglaDigits } from '../utils';
+import { initFirebase, isFirebaseConfigured } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface Notice {
   id: string;
@@ -201,7 +203,70 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
   const [sigFormPhoto, setSigFormPhoto] = useState('');
   const [isAddingSig, setIsAddingSig] = useState(false);
 
-  // 1. Load initial states from LocalStorage
+  // Helper to get active SystemSettings from localStorage
+  const getStoredSettings = () => {
+    try {
+      const stored = localStorage.getItem('ab_settings');
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return null;
+  };
+
+  // Helper to fetch notices & committee from Cloud Firebase
+  const fetchFromCloud = async () => {
+    const settings = getStoredSettings();
+    if (!settings || !isFirebaseConfigured(settings)) return;
+    const fb = initFirebase(settings);
+    if (!fb) return;
+
+    try {
+      const docRef = doc(fb.db, 'settings', 'notices_and_committee');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.notices && Array.isArray(data.notices)) {
+          setNotices(data.notices);
+          localStorage.setItem('ab_custom_notices', JSON.stringify(data.notices));
+        }
+        if (data.committee && Array.isArray(data.committee)) {
+          setCommittee(data.committee);
+          localStorage.setItem('ab_custom_committee', JSON.stringify(data.committee));
+        }
+        if (data.signatories && Array.isArray(data.signatories)) {
+          setSignatories(data.signatories);
+          localStorage.setItem('ab_custom_signatories', JSON.stringify(data.signatories));
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching notices and committee from cloud:", err);
+    }
+  };
+
+  // Helper to upload notices & committee to Cloud Firebase
+  const syncToCloud = async (newNotices?: Notice[], newCommittee?: CommitteeMember[], newSignatories?: BankSignatory[]) => {
+    const settings = getStoredSettings();
+    if (!settings || !isFirebaseConfigured(settings)) return;
+    const fb = initFirebase(settings);
+    if (!fb) return;
+
+    try {
+      const n = newNotices !== undefined ? newNotices : notices;
+      const c = newCommittee !== undefined ? newCommittee : committee;
+      const s = newSignatories !== undefined ? newSignatories : signatories;
+
+      const docRef = doc(fb.db, 'settings', 'notices_and_committee');
+      await setDoc(docRef, {
+        notices: n,
+        committee: c,
+        signatories: s,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error("Error syncing notices and committee to cloud:", err);
+    }
+  };
+
+  // 1. Load initial states from LocalStorage and then Firebase
   useEffect(() => {
     const storedNotices = localStorage.getItem('ab_custom_notices');
     if (storedNotices) {
@@ -226,22 +291,27 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
       setSignatories(DEFAULT_SIGNATORIES);
       localStorage.setItem('ab_custom_signatories', JSON.stringify(DEFAULT_SIGNATORIES));
     }
+
+    fetchFromCloud();
   }, []);
 
   // Save updates helper
   const saveNotices = (updated: Notice[]) => {
     setNotices(updated);
     localStorage.setItem('ab_custom_notices', JSON.stringify(updated));
+    syncToCloud(updated, committee, signatories);
   };
 
   const saveCommittee = (updated: CommitteeMember[]) => {
     setCommittee(updated);
     localStorage.setItem('ab_custom_committee', JSON.stringify(updated));
+    syncToCloud(notices, updated, signatories);
   };
 
   const saveSignatories = (updated: BankSignatory[]) => {
     setSignatories(updated);
     localStorage.setItem('ab_custom_signatories', JSON.stringify(updated));
+    syncToCloud(notices, committee, updated);
   };
 
   // 2. Notice Board operations
