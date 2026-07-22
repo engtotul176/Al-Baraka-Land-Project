@@ -33,42 +33,50 @@ export default function DashboardSheet({
   const totalBankDeposit = bankDeposits.reduce((sum, b) => sum + b.amount, 0);
   const cashInHand = totalCollection - totalBankDeposit;
 
-  // Current Month Collection (Assuming 2026 as current year, and looking up current real-world month)
-  // Let's check what months we have in payments. We can grab the latest payment month or default to "June" 
-  const currentMonth = "June"; 
-  const currentYear = 2026;
-  const currentMonthCollection = payments
-    .filter(p => p.month === currentMonth && p.year === currentYear)
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  // Due members calculation
-  // Let's assume each active member must pay 2000 (Monthly Deposit) for each month up to June.
-  // Active members who haven't paid June are due.
-  const activePaidJune = new Set(
-    payments
-      .filter(p => p.month === "June" && p.year === 2026 && p.paymentType === "Monthly Deposit")
-      .map(p => p.memberId)
-  );
-  const dueMembersCount = activeMembers - activePaidJune.size;
-
-  // Last Collection Details
-  const sortedPayments = [...payments].sort((a, b) => b.entryDate.localeCompare(a.entryDate));
-  const lastPayment = sortedPayments[0];
-
-  // Prepare monthly chart data (Jan to Jun 2026)
-  const monthsList = ["January", "February", "March", "April", "May", "June"];
+  // Current Month Collection dynamically calculated based on actual current date
+  const now = new Date();
+  const monthsList = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
   const monthsBangla: Record<string, string> = {
     "January": "জানুয়ারি",
     "February": "ফেব্রুয়ারি",
     "March": "মার্চ",
     "April": "এপ্রিল",
     "May": "মে",
-    "June": "জুন"
+    "June": "জুন",
+    "July": "জুলাই",
+    "August": "আগস্ট",
+    "September": "সেপ্টেম্বর",
+    "October": "অক্টোবর",
+    "November": "নভেম্বর",
+    "December": "ডিসেম্বর"
   };
 
+  const currentMonth = monthsList[now.getMonth()]; 
+  const currentYear = now.getFullYear();
+
+  const currentMonthCollection = payments
+    .filter(p => p.month === currentMonth && p.year === currentYear)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  // Due members calculation for current real-world month
+  const activePaidCurrentMonth = new Set(
+    payments
+      .filter(p => p.month === currentMonth && p.year === currentYear && p.paymentType === "Monthly Deposit")
+      .map(p => p.memberId)
+  );
+  const dueMembersCount = Math.max(0, activeMembers - activePaidCurrentMonth.size);
+
+  // Last Collection Details
+  const sortedPayments = [...payments].sort((a, b) => b.entryDate.localeCompare(a.entryDate));
+  const lastPayment = sortedPayments[0];
+
+  // Prepare monthly chart data (All 12 months for current year)
   const chartData = monthsList.map(m => {
     const amount = payments
-      .filter(p => p.month === m && p.year === 2026)
+      .filter(p => p.month === m && p.year === currentYear)
       .reduce((sum, p) => sum + p.amount, 0);
     return {
       month: m,
