@@ -54,9 +54,11 @@ export default function ReportsSheet({
   const [selectedPaymentToEdit, setSelectedPaymentToEdit] = useState<Payment | null>(null);
 
   // Filter States
-  const [selectedMonth, setSelectedMonth] = useState('June');
-  const [selectedYear, setSelectedYear] = useState(2026);
-  const [dueReportMonth, setDueReportMonth] = useState('June');
+  const now = new Date();
+  const currentRealMonth = MONTHS_LIST[now.getMonth()]?.name || 'July';
+  const [selectedMonth, setSelectedMonth] = useState(currentRealMonth);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [dueReportMonth, setDueReportMonth] = useState(currentRealMonth);
 
   // PRINT CURRENT ACTIVE REPORT
   const handlePrint = () => {

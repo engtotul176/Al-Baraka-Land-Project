@@ -42,9 +42,12 @@ export default function PaymentEntrySheet({
   onSelectReceipt,
   isAdmin = true
 }: PaymentEntrySheetProps) {
+  const now = new Date();
+  const currentRealMonth = MONTHS_LIST[now.getMonth()]?.name || 'July';
+
   const [selectedMemberId, setSelectedMemberId] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('June');
-  const [selectedYear, setSelectedYear] = useState(2026);
+  const [selectedMonth, setSelectedMonth] = useState(currentRealMonth);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentType>('Monthly Deposit');
   const [amount, setAmount] = useState(settings.monthlyAmount);
   const [remarks, setRemarks] = useState('');
@@ -75,9 +78,8 @@ export default function PaymentEntrySheet({
         .filter(p => p.paymentType === 'Monthly Deposit')
         .reduce((sum, p) => sum + p.amount, 0);
 
-      // Calculate dues based on active months up to June 2026 (6 months)
-      // (Assuming subscription starts Jan 2026, and we are evaluating up to June)
-      const elapsedMonthsCount = 6; 
+      // Calculate dues based on active months up to current month in current year
+      const elapsedMonthsCount = now.getMonth() + 1; 
       const totalExpectedMonthlyDeposit = elapsedMonthsCount * settings.monthlyAmount;
       const due = Math.max(0, totalExpectedMonthlyDeposit - monthlyDepositsPaid);
       setPreviousDue(due);

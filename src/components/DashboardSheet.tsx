@@ -69,8 +69,13 @@ export default function DashboardSheet({
   );
   const dueMembersCount = Math.max(0, activeMembers - activePaidCurrentMonth.size);
 
-  // Last Collection Details
-  const sortedPayments = [...payments].sort((a, b) => b.entryDate.localeCompare(a.entryDate));
+  // Last Collection Details: Sort by entry date and receipt number so the absolute latest posted payment is shown
+  const sortedPayments = [...payments].sort((a, b) => {
+    if (b.entryDate !== a.entryDate) {
+      return b.entryDate.localeCompare(a.entryDate);
+    }
+    return b.receiptNo.localeCompare(a.receiptNo);
+  });
   const lastPayment = sortedPayments[0];
 
   // Prepare monthly chart data (All 12 months for current year)
