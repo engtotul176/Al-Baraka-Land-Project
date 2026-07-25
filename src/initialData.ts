@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Member, Payment, BankDeposit, SystemSettings } from './types';
+import { Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry, SystemSettings } from './types';
 
 // Standard high-fidelity vector representations of Logo, Founder, and Signature
 // Stored as base64 or inline-renderable SVGs for seamless operation and customization.
@@ -338,6 +338,54 @@ export const getInitialBankDeposits = (): BankDeposit[] => {
       slipNumber: "SL-96120",
       reference: "ব্যাংক জমা - এপ্রিল ও মে",
       remarks: "সঞ্চয় তহবিল স্থানান্তর"
+    }
+  ];
+};
+
+export const getInitialBankWithdrawals = (): BankWithdrawal[] => {
+  return [
+    {
+      id: "BW-0001",
+      date: "2026-06-01",
+      bankName: "জনতা ব্যাংক পিএলসি",
+      branch: "ময়মনসিংহ শাখা",
+      amount: 20000,
+      chequeNumber: "CQ-883921",
+      withdrawPurpose: "Cash in Hand",
+      reference: "অফিস ও পরিচালনা খরচের জন্য উত্তোলন",
+      remarks: "ক্যাশ ইন হ্যান্ড ফান্ডে যুক্ত করার জন্য"
+    }
+  ];
+};
+
+export const getInitialExpenseEntries = (): ExpenseEntry[] => {
+  return [
+    {
+      id: "EX-0001",
+      date: "2026-06-02",
+      category: "Printing",
+      amount: 1500,
+      paidFrom: "Cash in Hand",
+      vouchersRef: "V-101",
+      remarks: "রশিদ বই ও প্রিন্টিং খরচ"
+    },
+    {
+      id: "EX-0002",
+      date: "2026-06-05",
+      category: "Stamp",
+      amount: 500,
+      paidFrom: "Cash in Hand",
+      vouchersRef: "V-102",
+      remarks: "অফিসিয়াল স্ট্যাম্প ও পেপার ক্রয়"
+    },
+    {
+      id: "EX-0003",
+      date: "2026-06-10",
+      category: "Meeting",
+      amount: 1200,
+      paidFrom: "Cash in Hand",
+      vouchersRef: "V-103",
+      remarks: "মাসিক সভা আপ্যায়ন ও নাস্তা খরচ"
     }
   ];
 };

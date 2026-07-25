@@ -54,6 +54,39 @@ export interface BankDeposit {
   slipPhoto?: string; // base64 representation of deposit slip
 }
 
+export interface BankWithdrawal {
+  id: string;
+  date: string;
+  bankName: string;
+  branch: string;
+  amount: number;
+  chequeNumber: string;
+  withdrawPurpose: 'Cash in Hand' | 'FDR Investment' | 'Direct Expense' | 'Member Refund' | 'Other';
+  reference: string;
+  remarks: string;
+  chequePhoto?: string; // base64 representation of cheque leaf image
+}
+
+export type ExpenseCategory = 
+  | 'Printing' 
+  | 'Stamp' 
+  | 'Meeting' 
+  | 'FDR' 
+  | 'Member Refund' 
+  | 'Office' 
+  | 'Other';
+
+export interface ExpenseEntry {
+  id: string;
+  date: string;
+  category: ExpenseCategory;
+  amount: number;
+  paidFrom: 'Cash in Hand' | 'Bank Withdrawal';
+  vouchersRef: string;
+  remarks: string;
+  voucherPhoto?: string; // base64 photo of voucher or memo
+}
+
 export interface SystemSettings {
   monthlyAmount: number;
   registrationFee: number;

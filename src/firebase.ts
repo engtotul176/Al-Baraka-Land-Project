@@ -325,7 +325,7 @@ export async function downloadAllFromFirebase(
 
 export async function syncSingleItem(
   settings: SystemSettings,
-  collectionName: 'members' | 'payments' | 'bankDeposits' | 'settings',
+  collectionName: 'members' | 'payments' | 'bankDeposits' | 'bankWithdrawals' | 'expenseEntries' | 'settings',
   docId: string,
   data: any
 ): Promise<void> {
@@ -347,7 +347,7 @@ export async function syncSingleItem(
 
 export async function deleteSingleItem(
   settings: SystemSettings,
-  collectionName: 'members' | 'payments' | 'bankDeposits',
+  collectionName: 'members' | 'payments' | 'bankDeposits' | 'bankWithdrawals' | 'expenseEntries',
   docId: string
 ): Promise<void> {
   if (!settings.firebaseSyncEnabled) return;

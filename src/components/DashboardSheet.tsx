@@ -4,14 +4,16 @@
  */
 
 import React, { useState } from 'react';
-import { Member, Payment, BankDeposit } from '../types';
+import { Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry } from '../types';
 import { toBanglaDigits, formatCurrencyBangla, getTodayBanglaDate } from '../utils';
-import { Users, Landmark, Wallet, Layers, AlertCircle, ArrowUpRight, TrendingUp, Calendar, BadgeCheck } from 'lucide-react';
+import { Users, Landmark, Wallet, Layers, AlertCircle, ArrowUpRight, TrendingUp, Calendar, BadgeCheck, Receipt } from 'lucide-react';
 
 interface DashboardSheetProps {
   members: Member[];
   payments: Payment[];
   bankDeposits: BankDeposit[];
+  bankWithdrawals?: BankWithdrawal[];
+  expenses?: ExpenseEntry[];
   onSelectTab: (tab: string) => void;
   onSelectReceipt: (receiptNo: string) => void;
 }
@@ -20,6 +22,8 @@ export default function DashboardSheet({
   members,
   payments,
   bankDeposits,
+  bankWithdrawals = [],
+  expenses = [],
   onSelectTab,
   onSelectReceipt
 }: DashboardSheetProps) {
@@ -31,7 +35,22 @@ export default function DashboardSheet({
   
   const totalCollection = payments.reduce((sum, p) => sum + p.amount, 0);
   const totalBankDeposit = bankDeposits.reduce((sum, b) => sum + b.amount, 0);
-  const cashInHand = totalCollection - totalBankDeposit;
+  const totalBankWithdrawal = bankWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+  const netBankBalance = Math.max(0, totalBankDeposit - totalBankWithdrawal);
+
+  // Cash in hand
+  const cashFromWithdrawals = bankWithdrawals
+    .filter(w => w.withdrawPurpose === 'Cash in Hand')
+    .reduce((sum, w) => sum + w.amount, 0);
+
+  const cashExpenses = expenses
+    .filter(e => e.paidFrom === 'Cash in Hand')
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const cashInHand = Math.max(0, totalCollection - totalBankDeposit + cashFromWithdrawals - cashExpenses);
+
+  // Total Expenses
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   // Current Month Collection dynamically calculated based on actual current date
   const now = new Date();
@@ -158,13 +177,13 @@ export default function DashboardSheet({
         {/* Metric 3: Bank Balance */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-slate-500">ব্যাংক ব্যালেন্স (জমা)</p>
-            <p className="text-2xl font-bold text-primary font-mono">{formatCurrencyBangla(totalBankDeposit)}</p>
+            <p className="text-sm font-medium text-slate-500">বর্তমান ব্যাংক ব্যালেন্স</p>
+            <p className="text-2xl font-bold text-emerald-800 font-mono">{formatCurrencyBangla(netBankBalance)}</p>
             <button 
               onClick={() => onSelectTab('bank')}
               className="text-xs text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-1 mt-1 cursor-pointer"
             >
-              ব্যাংক রেজিস্টার দেখুন <ArrowUpRight size={12} />
+              ব্যাংক & চেক রেজিস্টার <ArrowUpRight size={12} />
             </button>
           </div>
           <div className="p-3.5 bg-blue-50 rounded-xl text-blue-700 group-hover:scale-110 transition-transform duration-300">
@@ -175,9 +194,9 @@ export default function DashboardSheet({
         {/* Metric 4: Cash in Hand */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-slate-500">হাতে নগদ তহবিল</p>
+            <p className="text-sm font-medium text-slate-500">হাতে নগদ অবশিষ্ট ফান্ড</p>
             <p className="text-2xl font-bold text-amber-700 font-mono">{formatCurrencyBangla(cashInHand)}</p>
-            <p className="text-xs text-slate-400">তহবিল মাইনাস ব্যাংক ডিপোজিট</p>
+            <p className="text-xs text-slate-400">ক্যাশ ইন হ্যান্ড অবশিষ্ট স্থিতি</p>
           </div>
           <div className="p-3.5 bg-amber-50 rounded-xl text-amber-700 group-hover:scale-110 transition-transform duration-300">
             <Wallet size={24} />

@@ -4,11 +4,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Member, Payment, BankDeposit, SystemSettings } from './types';
+import { Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry, SystemSettings } from './types';
 import { 
   getInitialMembers, 
   getInitialPayments, 
   getInitialBankDeposits, 
+  getInitialBankWithdrawals,
+  getInitialExpenseEntries,
   DEFAULT_SETTINGS,
   DEFAULT_LOGO_SVG 
 } from './initialData';
@@ -52,6 +54,8 @@ export default function App() {
   const [members, setMembers] = useState<Member[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [bankDeposits, setBankDeposits] = useState<BankDeposit[]>([]);
+  const [bankWithdrawals, setBankWithdrawals] = useState<BankWithdrawal[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
   const [isAdmin, setIsAdmin] = useState<boolean>(true);
 
@@ -159,6 +163,8 @@ export default function App() {
       const storedMembers = localStorage.getItem('ab_members');
       const storedPayments = localStorage.getItem('ab_payments');
       const storedDeposits = localStorage.getItem('ab_deposits');
+      const storedWithdrawals = localStorage.getItem('ab_withdrawals');
+      const storedExpenses = localStorage.getItem('ab_expenses');
       const storedSettings = localStorage.getItem('ab_settings');
 
       if (storedMembers) {
@@ -183,6 +189,22 @@ export default function App() {
         const initD = getInitialBankDeposits();
         setBankDeposits(initD);
         localStorage.setItem('ab_deposits', JSON.stringify(initD));
+      }
+
+      if (storedWithdrawals) {
+        setBankWithdrawals(JSON.parse(storedWithdrawals));
+      } else {
+        const initW = getInitialBankWithdrawals();
+        setBankWithdrawals(initW);
+        localStorage.setItem('ab_withdrawals', JSON.stringify(initW));
+      }
+
+      if (storedExpenses) {
+        setExpenses(JSON.parse(storedExpenses));
+      } else {
+        const initE = getInitialExpenseEntries();
+        setExpenses(initE);
+        localStorage.setItem('ab_expenses', JSON.stringify(initE));
       }
 
       // Read settings and merge environment variables for automatic connection
@@ -291,6 +313,16 @@ export default function App() {
     localStorage.setItem('ab_deposits', JSON.stringify(updated));
   };
 
+  const saveWithdrawals = (updated: BankWithdrawal[]) => {
+    setBankWithdrawals(updated);
+    localStorage.setItem('ab_withdrawals', JSON.stringify(updated));
+  };
+
+  const saveExpenses = (updated: ExpenseEntry[]) => {
+    setExpenses(updated);
+    localStorage.setItem('ab_expenses', JSON.stringify(updated));
+  };
+
   const saveSettings = (updated: SystemSettings) => {
     setSettings(updated);
     localStorage.setItem('ab_settings', JSON.stringify(updated));
@@ -375,6 +407,54 @@ export default function App() {
     saveDeposits(updated);
     if (settings.firebaseSyncEnabled) {
       deleteSingleItem(settings, 'bankDeposits', id);
+    }
+  };
+
+  const handleAddBankWithdrawal = (w: BankWithdrawal) => {
+    const updated = [w, ...bankWithdrawals];
+    saveWithdrawals(updated);
+    if (settings.firebaseSyncEnabled) {
+      syncSingleItem(settings, 'bankWithdrawals', w.id, w);
+    }
+  };
+
+  const handleUpdateBankWithdrawal = (w: BankWithdrawal) => {
+    const updated = bankWithdrawals.map(old => old.id === w.id ? w : old);
+    saveWithdrawals(updated);
+    if (settings.firebaseSyncEnabled) {
+      syncSingleItem(settings, 'bankWithdrawals', w.id, w);
+    }
+  };
+
+  const handleDeleteBankWithdrawal = (id: string) => {
+    const updated = bankWithdrawals.filter(w => w.id !== id);
+    saveWithdrawals(updated);
+    if (settings.firebaseSyncEnabled) {
+      deleteSingleItem(settings, 'bankWithdrawals', id);
+    }
+  };
+
+  const handleAddExpense = (e: ExpenseEntry) => {
+    const updated = [e, ...expenses];
+    saveExpenses(updated);
+    if (settings.firebaseSyncEnabled) {
+      syncSingleItem(settings, 'expenseEntries', e.id, e);
+    }
+  };
+
+  const handleUpdateExpense = (e: ExpenseEntry) => {
+    const updated = expenses.map(old => old.id === e.id ? e : old);
+    saveExpenses(updated);
+    if (settings.firebaseSyncEnabled) {
+      syncSingleItem(settings, 'expenseEntries', e.id, e);
+    }
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    const updated = expenses.filter(e => e.id !== id);
+    saveExpenses(updated);
+    if (settings.firebaseSyncEnabled) {
+      deleteSingleItem(settings, 'expenseEntries', id);
     }
   };
 
@@ -881,6 +961,8 @@ export default function App() {
               members={members}
               payments={payments}
               bankDeposits={bankDeposits}
+              bankWithdrawals={bankWithdrawals}
+              expenses={expenses}
               onSelectTab={setActiveTab}
               onSelectReceipt={setSelectedReceiptNo}
             />
@@ -929,10 +1011,18 @@ export default function App() {
           {activeTab === 'bank' && (
             <BankDepositSheet
               bankDeposits={bankDeposits}
+              bankWithdrawals={bankWithdrawals}
+              expenses={expenses}
               payments={payments}
               onAddBankDeposit={handleAddBankDeposit}
               onUpdateBankDeposit={handleUpdateBankDeposit}
               onDeleteBankDeposit={handleDeleteBankDeposit}
+              onAddBankWithdrawal={handleAddBankWithdrawal}
+              onUpdateBankWithdrawal={handleUpdateBankWithdrawal}
+              onDeleteBankWithdrawal={handleDeleteBankWithdrawal}
+              onAddExpense={handleAddExpense}
+              onUpdateExpense={handleUpdateExpense}
+              onDeleteExpense={handleDeleteExpense}
               isAdmin={isAdmin}
             />
           )}

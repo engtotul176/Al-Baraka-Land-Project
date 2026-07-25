@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Member, Payment, SystemSettings } from '../types';
-import { toBanglaDigits, formatCurrencyBangla } from '../utils';
+import { toBanglaDigits, formatCurrencyBangla, getElapsedMonthsFromJuly2026 } from '../utils';
 import { FileText, Printer, CheckCircle, AlertTriangle, Landmark, Compass, Eye, Edit2, Trash2 } from 'lucide-react';
 import EditPaymentModal from './EditPaymentModal';
 
@@ -77,8 +77,8 @@ export default function MemberLedgerSheet({
     .reduce((sum, p) => sum + p.amount, 0);
 
   // Calculation of dues
-  // Baseline: expected monthly deposit for elapsed active months in 2026 (Jan to Jun = 6 months)
-  const elapsedMonths = 6;
+  // Baseline: expected monthly deposit for elapsed active months starting strictly from July 2026
+  const elapsedMonths = getElapsedMonthsFromJuly2026();
   const expectedMonthlyDeposit = elapsedMonths * settings.monthlyAmount;
   const monthlyDepositDue = Math.max(0, expectedMonthlyDeposit - monthlyDepositTotal);
 
