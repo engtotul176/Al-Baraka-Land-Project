@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useState } from 'react';
-import { SystemSettings, Member, Payment, BankDeposit } from '../types';
+import { SystemSettings, Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry } from '../types';
 import { toBanglaDigits } from '../utils';
 import { isFirebaseConfigured, uploadAllToFirebase, testFirebaseConnection } from '../firebase';
 import { 
@@ -33,6 +33,8 @@ interface SettingsSheetProps {
   members: Member[];
   payments: Payment[];
   bankDeposits: BankDeposit[];
+  bankWithdrawals?: BankWithdrawal[];
+  expenses?: ExpenseEntry[];
   onImportData: (data: { members: Member[]; payments: Payment[]; bankDeposits: BankDeposit[]; settings?: SystemSettings }) => void;
   onRestoreDemoData: () => void;
   onClearAllData: () => void;
@@ -51,6 +53,8 @@ export default function SettingsSheet({
   members,
   payments,
   bankDeposits,
+  bankWithdrawals = [],
+  expenses = [],
   onImportData,
   onRestoreDemoData,
   onClearAllData,
@@ -139,7 +143,7 @@ export default function SettingsSheet({
     setUploadSuccess(false);
     setUploadProgressText("প্রস্তুত করা হচ্ছে...");
     try {
-      await uploadAllToFirebase(settings, members, payments, bankDeposits, (step) => {
+      await uploadAllToFirebase(settings, members, payments, bankDeposits, bankWithdrawals, expenses, (step) => {
         setUploadProgressText(step);
       });
       setUploadSuccess(true);

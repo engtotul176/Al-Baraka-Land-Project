@@ -7,9 +7,10 @@ import {
   deleteDoc,
   doc, 
   writeBatch,
+  onSnapshot,
   Firestore 
 } from 'firebase/firestore';
-import { Member, Payment, BankDeposit, SystemSettings } from './types';
+import { Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry, SystemSettings } from './types';
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
@@ -79,6 +80,8 @@ export async function uploadAllToFirebase(
   members: Member[],
   payments: Payment[],
   bankDeposits: BankDeposit[],
+  bankWithdrawals: BankWithdrawal[] = [],
+  expenseEntries: ExpenseEntry[] = [],
   onProgress?: (statusText: string) => void
 ): Promise<void> {
   const firebaseInstance = initFirebase(settings);
@@ -245,7 +248,85 @@ export async function uploadAllToFirebase(
       await withTimeout(batch.commit(), 10000);
     }
 
-    if (onProgress) onProgress("ধাপ ৮: সকল তথ্য সফলভাবে সিঙ্ক সম্পন্ন হয়েছে!");
+    // 5. Clear old Bank Withdrawals (Cash in Hand) in Firestore
+    if (onProgress) onProgress("ধাপ ৮: ব্যাংক উত্তোলন/ক্যাশ ইন হ্যান্ড তথ্য সিঙ্ক করা হচ্ছে...");
+    const withdrawalsCollection = collection(db, 'bankWithdrawals');
+    const existingWithdrawalsSnap = await withTimeout(getDocs(withdrawalsCollection), 10000);
+    const localWithdrawalIds = new Set(bankWithdrawals.map(w => w.id));
+    batch = writeBatch(db);
+    count = 0;
+
+    for (const docSnap of existingWithdrawalsSnap.docs) {
+      if (!localWithdrawalIds.has(docSnap.id)) {
+        batch.delete(docSnap.ref);
+        count++;
+        if (count === 500) {
+          await withTimeout(batch.commit(), 10000);
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+    }
+    if (count > 0) {
+      await withTimeout(batch.commit(), 10000);
+    }
+
+    batch = writeBatch(db);
+    count = 0;
+    for (const w of bankWithdrawals) {
+      const withdrawalDocRef = doc(withdrawalsCollection, w.id);
+      batch.set(withdrawalDocRef, w);
+      count++;
+      if (count === 500) {
+        await withTimeout(batch.commit(), 10000);
+        batch = writeBatch(db);
+        count = 0;
+      }
+    }
+    if (count > 0) {
+      await withTimeout(batch.commit(), 10000);
+    }
+
+    // 6. Clear old Expense Entries in Firestore
+    if (onProgress) onProgress("ধাপ ৯: খরচ/ব্যয় সংক্রান্ত তথ্য সিঙ্ক করা হচ্ছে...");
+    const expensesCollection = collection(db, 'expenseEntries');
+    const existingExpensesSnap = await withTimeout(getDocs(expensesCollection), 10000);
+    const localExpenseIds = new Set(expenseEntries.map(e => e.id));
+    batch = writeBatch(db);
+    count = 0;
+
+    for (const docSnap of existingExpensesSnap.docs) {
+      if (!localExpenseIds.has(docSnap.id)) {
+        batch.delete(docSnap.ref);
+        count++;
+        if (count === 500) {
+          await withTimeout(batch.commit(), 10000);
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+    }
+    if (count > 0) {
+      await withTimeout(batch.commit(), 10000);
+    }
+
+    batch = writeBatch(db);
+    count = 0;
+    for (const e of expenseEntries) {
+      const expenseDocRef = doc(expensesCollection, e.id);
+      batch.set(expenseDocRef, e);
+      count++;
+      if (count === 500) {
+        await withTimeout(batch.commit(), 10000);
+        batch = writeBatch(db);
+        count = 0;
+      }
+    }
+    if (count > 0) {
+      await withTimeout(batch.commit(), 10000);
+    }
+
+    if (onProgress) onProgress("ধাপ ১০: সকল তথ্য সফলভাবে সিঙ্ক সম্পন্ন হয়েছে!");
     console.log("Uploaded all data successfully to Firestore!");
   } catch (err) {
     console.error("Error uploading to Firestore:", err);
@@ -259,6 +340,8 @@ export async function downloadAllFromFirebase(
   members: Member[];
   payments: Payment[];
   bankDeposits: BankDeposit[];
+  bankWithdrawals: BankWithdrawal[];
+  expenseEntries: ExpenseEntry[];
   settings?: SystemSettings;
 } | null> {
   const firebaseInstance = initFirebase(settings);
@@ -270,12 +353,14 @@ export async function downloadAllFromFirebase(
 
   try {
     // Fetch all collections in parallel to speed up and fail fast within 10 seconds
-    const [settingsSnap, membersSnap, paymentsSnap, depositsSnap] = await withTimeout(
+    const [settingsSnap, membersSnap, paymentsSnap, depositsSnap, withdrawalsSnap, expensesSnap] = await withTimeout(
       Promise.all([
         getDocs(collection(db, 'settings')),
         getDocs(collection(db, 'members')),
         getDocs(collection(db, 'payments')),
-        getDocs(collection(db, 'bankDeposits'))
+        getDocs(collection(db, 'bankDeposits')),
+        getDocs(collection(db, 'bankWithdrawals')),
+        getDocs(collection(db, 'expenseEntries'))
       ]),
       10000
     );
@@ -306,20 +391,112 @@ export async function downloadAllFromFirebase(
       bankDeposits.push(docSnap.data() as BankDeposit);
     });
 
+    // 5. Process Bank Withdrawals
+    const bankWithdrawals: BankWithdrawal[] = [];
+    withdrawalsSnap.forEach((docSnap) => {
+      bankWithdrawals.push(docSnap.data() as BankWithdrawal);
+    });
+
+    // 6. Process Expense Entries
+    const expenseEntries: ExpenseEntry[] = [];
+    expensesSnap.forEach((docSnap) => {
+      expenseEntries.push(docSnap.data() as ExpenseEntry);
+    });
+
     // Sort to maintain original view sorting
     members.sort((a, b) => b.memberId.localeCompare(a.memberId));
     payments.sort((a, b) => b.receiptNo.localeCompare(a.receiptNo));
     bankDeposits.sort((a, b) => b.date.localeCompare(a.date));
+    bankWithdrawals.sort((a, b) => b.date.localeCompare(a.date));
+    expenseEntries.sort((a, b) => b.date.localeCompare(a.date));
 
     return {
       members,
       payments,
       bankDeposits,
+      bankWithdrawals,
+      expenseEntries,
       settings: cloudSettings
     };
   } catch (err: any) {
     console.error("Error downloading from Firestore:", err);
     throw new Error(err.message || "ফায়ারবেস ক্লাউড থেকে ডাটা ডাউনলোড করতে ব্যর্থ হয়েছে। অনুগ্রহ করে আপনার ইন্টারনেট কানেকশন এবং কনফিগারেশন পুনরায় যাচাই করুন।");
+  }
+}
+
+export function subscribeToFirestoreChanges(
+  settings: SystemSettings,
+  onDataReceived: (data: {
+    members?: Member[];
+    payments?: Payment[];
+    bankDeposits?: BankDeposit[];
+    bankWithdrawals?: BankWithdrawal[];
+    expenseEntries?: ExpenseEntry[];
+    settings?: SystemSettings;
+  }) => void
+): () => void {
+  if (!isFirebaseConfigured(settings)) return () => {};
+
+  const firebaseInstance = initFirebase(settings);
+  if (!firebaseInstance) return () => {};
+
+  const { db } = firebaseInstance;
+
+  try {
+    const unsubMembers = onSnapshot(collection(db, 'members'), (snapshot) => {
+      const members: Member[] = [];
+      snapshot.forEach((docSnap) => members.push(docSnap.data() as Member));
+      members.sort((a, b) => b.memberId.localeCompare(a.memberId));
+      onDataReceived({ members });
+    }, (err) => console.error("Realtime members listener error:", err));
+
+    const unsubPayments = onSnapshot(collection(db, 'payments'), (snapshot) => {
+      const payments: Payment[] = [];
+      snapshot.forEach((docSnap) => payments.push(docSnap.data() as Payment));
+      payments.sort((a, b) => b.receiptNo.localeCompare(a.receiptNo));
+      onDataReceived({ payments });
+    }, (err) => console.error("Realtime payments listener error:", err));
+
+    const unsubDeposits = onSnapshot(collection(db, 'bankDeposits'), (snapshot) => {
+      const bankDeposits: BankDeposit[] = [];
+      snapshot.forEach((docSnap) => bankDeposits.push(docSnap.data() as BankDeposit));
+      bankDeposits.sort((a, b) => b.date.localeCompare(a.date));
+      onDataReceived({ bankDeposits });
+    }, (err) => console.error("Realtime deposits listener error:", err));
+
+    const unsubWithdrawals = onSnapshot(collection(db, 'bankWithdrawals'), (snapshot) => {
+      const bankWithdrawals: BankWithdrawal[] = [];
+      snapshot.forEach((docSnap) => bankWithdrawals.push(docSnap.data() as BankWithdrawal));
+      bankWithdrawals.sort((a, b) => b.date.localeCompare(a.date));
+      onDataReceived({ bankWithdrawals });
+    }, (err) => console.error("Realtime withdrawals listener error:", err));
+
+    const unsubExpenses = onSnapshot(collection(db, 'expenseEntries'), (snapshot) => {
+      const expenseEntries: ExpenseEntry[] = [];
+      snapshot.forEach((docSnap) => expenseEntries.push(docSnap.data() as ExpenseEntry));
+      expenseEntries.sort((a, b) => b.date.localeCompare(a.date));
+      onDataReceived({ expenseEntries });
+    }, (err) => console.error("Realtime expenses listener error:", err));
+
+    const unsubSettings = onSnapshot(collection(db, 'settings'), (snapshot) => {
+      snapshot.forEach((docSnap) => {
+        if (docSnap.id === 'system_config') {
+          onDataReceived({ settings: docSnap.data() as SystemSettings });
+        }
+      });
+    }, (err) => console.error("Realtime settings listener error:", err));
+
+    return () => {
+      unsubMembers();
+      unsubPayments();
+      unsubDeposits();
+      unsubWithdrawals();
+      unsubExpenses();
+      unsubSettings();
+    };
+  } catch (err) {
+    console.error("Failed to subscribe to Firestore real-time changes:", err);
+    return () => {};
   }
 }
 

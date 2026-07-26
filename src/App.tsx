@@ -15,7 +15,7 @@ import {
   DEFAULT_LOGO_SVG 
 } from './initialData';
 import { exportToExcel, toBanglaDigits, formatCurrencyBangla } from './utils';
-import { isFirebaseConfigured, downloadAllFromFirebase, syncSingleItem, uploadAllToFirebase, deleteSingleItem } from './firebase';
+import { isFirebaseConfigured, downloadAllFromFirebase, syncSingleItem, uploadAllToFirebase, deleteSingleItem, subscribeToFirestoreChanges } from './firebase';
 
 // Sub Components Imports
 import DashboardSheet from './components/DashboardSheet';
@@ -90,6 +90,8 @@ export default function App() {
           saveMembers(data.members);
           savePayments(data.payments);
           saveDeposits(data.bankDeposits);
+          saveWithdrawals(data.bankWithdrawals || []);
+          saveExpenses(data.expenseEntries || []);
 
           // Merge credentials from local setting to avoid overwriting API keys on sync
           const mergedSettings: SystemSettings = {
@@ -105,10 +107,12 @@ export default function App() {
           saveSettings(mergedSettings);
         } else {
           // Fallback for older databases or uninitialized setups where settings document is missing
-          if (data.members.length > 0 || data.payments.length > 0 || data.bankDeposits.length > 0) {
+          if (data.members.length > 0 || data.payments.length > 0 || data.bankDeposits.length > 0 || data.bankWithdrawals.length > 0 || data.expenseEntries.length > 0) {
             saveMembers(data.members);
             savePayments(data.payments);
             saveDeposits(data.bankDeposits);
+            saveWithdrawals(data.bankWithdrawals || []);
+            saveExpenses(data.expenseEntries || []);
           }
         }
       }
@@ -119,6 +123,42 @@ export default function App() {
       setIsSyncing(false);
     }
   };
+
+  // Set up Firestore real-time listener for instant live updates across all connected devices
+  useEffect(() => {
+    if (!settings || !isFirebaseConfigured(settings) || !settings.firebaseSyncEnabled) {
+      return;
+    }
+
+    const unsubscribe = subscribeToFirestoreChanges(settings, (data) => {
+      if (data.members) saveMembers(data.members);
+      if (data.payments) savePayments(data.payments);
+      if (data.bankDeposits) saveDeposits(data.bankDeposits);
+      if (data.bankWithdrawals) saveWithdrawals(data.bankWithdrawals);
+      if (data.expenseEntries) saveExpenses(data.expenseEntries);
+      if (data.settings) {
+        saveSettings({
+          ...data.settings,
+          firebaseApiKey: settings.firebaseApiKey || data.settings.firebaseApiKey,
+          firebaseAuthDomain: settings.firebaseAuthDomain || data.settings.firebaseAuthDomain,
+          firebaseProjectId: settings.firebaseProjectId || data.settings.firebaseProjectId,
+          firebaseStorageBucket: settings.firebaseStorageBucket || data.settings.firebaseStorageBucket,
+          firebaseMessagingSenderId: settings.firebaseMessagingSenderId || data.settings.firebaseMessagingSenderId,
+          firebaseAppId: settings.firebaseAppId || data.settings.firebaseAppId,
+          firebaseSyncEnabled: settings.firebaseSyncEnabled,
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [
+    settings.firebaseSyncEnabled, 
+    settings.firebaseApiKey, 
+    settings.firebaseProjectId, 
+    settings.firebaseAppId
+  ]);
 
   // 1. Initialize data on Mount
   useEffect(() => {
@@ -594,18 +634,22 @@ export default function App() {
     members: Member[];
     payments: Payment[];
     bankDeposits: BankDeposit[];
+    bankWithdrawals?: BankWithdrawal[];
+    expenses?: ExpenseEntry[];
     settings?: SystemSettings;
   }) => {
     saveMembers(imported.members);
     savePayments(imported.payments);
     saveDeposits(imported.bankDeposits);
+    if (imported.bankWithdrawals) saveWithdrawals(imported.bankWithdrawals);
+    if (imported.expenses) saveExpenses(imported.expenses);
     const activeSettings = imported.settings || settings;
     if (imported.settings) {
       saveSettings(imported.settings);
     }
 
     if (activeSettings.firebaseSyncEnabled) {
-      uploadAllToFirebase(activeSettings, imported.members, imported.payments, imported.bankDeposits)
+      uploadAllToFirebase(activeSettings, imported.members, imported.payments, imported.bankDeposits, imported.bankWithdrawals || [], imported.expenses || [])
         .then(() => console.log("Cloud backup synced successfully."))
         .catch(err => console.error("Cloud backup sync failed:", err));
     }
@@ -619,17 +663,21 @@ export default function App() {
     const initM = getInitialMembers();
     const initP = getInitialPayments();
     const initD = getInitialBankDeposits();
+    const initW = getInitialBankWithdrawals();
+    const initE = getInitialExpenseEntries();
     
     saveMembers(initM);
     savePayments(initP);
     saveDeposits(initD);
+    saveWithdrawals(initW);
+    saveExpenses(initE);
     saveSettings(DEFAULT_SETTINGS);
     
     setSelectedReceiptNo('');
     setSelectedLedgerMemberId('');
     
     if (DEFAULT_SETTINGS.firebaseSyncEnabled) {
-      uploadAllToFirebase(DEFAULT_SETTINGS, initM, initP, initD)
+      uploadAllToFirebase(DEFAULT_SETTINGS, initM, initP, initD, initW, initE)
         .then(() => console.log("Cloud demo data synced successfully."))
         .catch(err => console.error("Cloud demo data sync failed:", err));
     }
@@ -644,12 +692,14 @@ export default function App() {
     saveMembers([]);
     savePayments([]);
     saveDeposits([]);
+    saveWithdrawals([]);
+    saveExpenses([]);
     
     setSelectedReceiptNo('');
     setSelectedLedgerMemberId('');
     
     if (settings.firebaseSyncEnabled) {
-      uploadAllToFirebase(settings, [], [], [])
+      uploadAllToFirebase(settings, [], [], [], [], [])
         .then(() => console.log("Cloud database cleared successfully."))
         .catch(err => console.error("Cloud database clear failed:", err));
     }
@@ -1074,6 +1124,8 @@ export default function App() {
               members={members}
               payments={payments}
               bankDeposits={bankDeposits}
+              bankWithdrawals={bankWithdrawals}
+              expenses={expenses}
               onImportData={handleImportData}
               onRestoreDemoData={handleRestoreDemoData}
               onClearAllData={handleClearAllData}
