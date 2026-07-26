@@ -134,7 +134,7 @@ export default function MembersSheet({
       nomineeMobile: nomineeMobile.trim() || mobile.trim(),
       status,
       remarks: remarks.trim(),
-      photo: photo || undefined
+      photo: photo || ''
     };
 
     if (editingMemberId) {

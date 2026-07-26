@@ -128,19 +128,45 @@ export default function BankDepositSheet({
     .reduce((sum, e) => sum + e.amount, 0);
   const totalFDRBalance = fdrFromWithdrawals + fdrFromExpenses;
 
-  // Image Upload Handler Helper
+  // Image Upload Handler Helper with Automatic Canvas Compression (to avoid >1MB Firestore document limit)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1.5 * 1024 * 1024) {
-      alert("ফাইলের সাইজ অনেক বড়! অনুগ্রহ করে ১.৫ MB এর চেয়ে ছোট ছবি আপলোড করুন।");
-      return;
-    }
-
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setter(reader.result as string);
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_DIM = 800;
+
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.65);
+          setter(compressedDataUrl);
+        } else {
+          setter(event.target?.result as string);
+        }
+      };
+      img.onerror = () => {
+        setter(event.target?.result as string);
+      };
+      img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
   };
@@ -162,7 +188,7 @@ export default function BankDepositSheet({
       slipNumber: depSlipNumber.trim(),
       reference: depReference.trim() || 'মাসিক সঞ্চয় তহবিল স্থানান্তর',
       remarks: depRemarks.trim(),
-      slipPhoto: depSlipPhoto || undefined
+      slipPhoto: depSlipPhoto || ''
     };
 
     if (editingDepositId) {
@@ -225,7 +251,7 @@ export default function BankDepositSheet({
       withdrawPurpose: witPurpose,
       reference: witReference.trim() || 'ব্যাংক থেকে উত্তোলন',
       remarks: witRemarks.trim(),
-      chequePhoto: witChequePhoto || undefined
+      chequePhoto: witChequePhoto || ''
     };
 
     if (editingWithdrawId) {
@@ -283,7 +309,7 @@ export default function BankDepositSheet({
       paidFrom: expPaidFrom,
       vouchersRef: expVouchersRef.trim() || 'VOUCHER',
       remarks: expRemarks.trim(),
-      voucherPhoto: expVoucherPhoto || undefined
+      voucherPhoto: expVoucherPhoto || ''
     };
 
     if (editingExpenseId) {

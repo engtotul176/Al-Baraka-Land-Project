@@ -154,7 +154,7 @@ export async function uploadAllToFirebase(
     count = 0;
     for (const m of members) {
       const memberDocRef = doc(membersCollection, m.memberId);
-      batch.set(memberDocRef, m);
+      batch.set(memberDocRef, JSON.parse(JSON.stringify(m)));
       count++;
       if (count === 500) {
         await withTimeout(batch.commit(), 10000);
@@ -195,7 +195,7 @@ export async function uploadAllToFirebase(
     count = 0;
     for (const p of payments) {
       const paymentDocRef = doc(paymentsCollection, p.receiptNo);
-      batch.set(paymentDocRef, p);
+      batch.set(paymentDocRef, JSON.parse(JSON.stringify(p)));
       count++;
       if (count === 500) {
         await withTimeout(batch.commit(), 10000);
@@ -236,7 +236,7 @@ export async function uploadAllToFirebase(
     count = 0;
     for (const d of bankDeposits) {
       const depositDocRef = doc(depositsCollection, d.id);
-      batch.set(depositDocRef, d);
+      batch.set(depositDocRef, JSON.parse(JSON.stringify(d)));
       count++;
       if (count === 500) {
         await withTimeout(batch.commit(), 10000);
@@ -275,7 +275,7 @@ export async function uploadAllToFirebase(
     count = 0;
     for (const w of bankWithdrawals) {
       const withdrawalDocRef = doc(withdrawalsCollection, w.id);
-      batch.set(withdrawalDocRef, w);
+      batch.set(withdrawalDocRef, JSON.parse(JSON.stringify(w)));
       count++;
       if (count === 500) {
         await withTimeout(batch.commit(), 10000);
@@ -314,7 +314,7 @@ export async function uploadAllToFirebase(
     count = 0;
     for (const e of expenseEntries) {
       const expenseDocRef = doc(expensesCollection, e.id);
-      batch.set(expenseDocRef, e);
+      batch.set(expenseDocRef, JSON.parse(JSON.stringify(e)));
       count++;
       if (count === 500) {
         await withTimeout(batch.commit(), 10000);
@@ -514,8 +514,10 @@ export async function syncSingleItem(
   const { db } = firebaseInstance;
   try {
     const docRef = doc(db, collectionName, docId);
+    // Sanitize object to remove undefined keys because Firestore rejects undefined values
+    const cleanData = JSON.parse(JSON.stringify(data));
     // Enforce a quick timeout of 6 seconds so background sync doesn't lock up or retard UI if network is bad
-    await withTimeout(setDoc(docRef, data), 6000);
+    await withTimeout(setDoc(docRef, cleanData), 6000);
     console.log(`Successfully synced single item to Firestore: ${collectionName}/${docId}`);
   } catch (err) {
     console.error(`Failed to sync single item ${collectionName}/${docId} to Firestore:`, err);
