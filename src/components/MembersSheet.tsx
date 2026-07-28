@@ -400,18 +400,46 @@ export default function MembersSheet({
                   accept="image/*" 
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) {
-                      if (file.size > 1024 * 1024) {
-                        alert("ভুল! ফাইলের সাইজ খুব বড় (সর্বোচ্চ ১ মেগাবایت)। অনুগ্রহ করে ছোট সাইজের ছবি আপলোড করুন।");
-                        return;
-                      }
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        setPhoto(event.target?.result as string);
-                        alert("সদস্যের ছবি সফলভাবে যুক্ত করা হয়েছে!");
+                    if (!file) return;
+                    const inputEl = e.target;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const dataUrl = event.target?.result as string;
+                      if (!dataUrl) return;
+                      const img = new window.Image();
+                      img.onload = () => {
+                        try {
+                          const canvas = document.createElement('canvas');
+                          let width = img.width;
+                          let height = img.height;
+                          const MAX_DIM = 600;
+                          if (width > MAX_DIM || height > MAX_DIM) {
+                            if (width > height) {
+                              height = Math.round((height * MAX_DIM) / width);
+                              width = MAX_DIM;
+                            } else {
+                              width = Math.round((width * MAX_DIM) / height);
+                              height = MAX_DIM;
+                            }
+                          }
+                          canvas.width = width;
+                          canvas.height = height;
+                          const ctx = canvas.getContext('2d');
+                          if (ctx) {
+                            ctx.drawImage(img, 0, 0, width, height);
+                            setPhoto(canvas.toDataURL('image/jpeg', 0.65));
+                          } else {
+                            setPhoto(dataUrl);
+                          }
+                        } catch {
+                          setPhoto(dataUrl);
+                        }
                       };
-                      reader.readAsDataURL(file);
-                    }
+                      img.onerror = () => setPhoto(dataUrl);
+                      img.src = dataUrl;
+                    };
+                    reader.readAsDataURL(file);
+                    inputEl.value = '';
                   }}
                   className="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                 />
