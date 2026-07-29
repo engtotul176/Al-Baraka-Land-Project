@@ -16,6 +16,7 @@ import {
 } from './initialData';
 import { exportToExcel, toBanglaDigits, formatCurrencyBangla } from './utils';
 import { isFirebaseConfigured, downloadAllFromFirebase, syncSingleItem, uploadAllToFirebase, deleteSingleItem, subscribeToFirestoreChanges } from './firebase';
+import { safeSetLocalStorage, safeGetLocalStorage, cleanupStorageQuotaOnStartup } from './storage';
 
 // Sub Components Imports
 import DashboardSheet from './components/DashboardSheet';
@@ -163,6 +164,10 @@ export default function App() {
   // 1. Initialize data on Mount
   useEffect(() => {
     let activeSettings: SystemSettings = DEFAULT_SETTINGS;
+    
+    // Clean up bloated images from localStorage to immediately free quota
+    cleanupStorageQuotaOnStartup();
+
     try {
       // Check if we have an incoming Firebase configuration link in the URL
       const urlParams = new URLSearchParams(window.location.search);
@@ -340,32 +345,32 @@ export default function App() {
   // 2. Persist state changes
   const saveMembers = (updated: Member[]) => {
     setMembers(updated);
-    localStorage.setItem('ab_members', JSON.stringify(updated));
+    safeSetLocalStorage('ab_members', updated);
   };
 
   const savePayments = (updated: Payment[]) => {
     setPayments(updated);
-    localStorage.setItem('ab_payments', JSON.stringify(updated));
+    safeSetLocalStorage('ab_payments', updated);
   };
 
   const saveDeposits = (updated: BankDeposit[]) => {
     setBankDeposits(updated);
-    localStorage.setItem('ab_deposits', JSON.stringify(updated));
+    safeSetLocalStorage('ab_deposits', updated);
   };
 
   const saveWithdrawals = (updated: BankWithdrawal[]) => {
     setBankWithdrawals(updated);
-    localStorage.setItem('ab_withdrawals', JSON.stringify(updated));
+    safeSetLocalStorage('ab_withdrawals', updated);
   };
 
   const saveExpenses = (updated: ExpenseEntry[]) => {
     setExpenses(updated);
-    localStorage.setItem('ab_expenses', JSON.stringify(updated));
+    safeSetLocalStorage('ab_expenses', updated);
   };
 
   const saveSettings = (updated: SystemSettings) => {
     setSettings(updated);
-    localStorage.setItem('ab_settings', JSON.stringify(updated));
+    safeSetLocalStorage('ab_settings', updated);
   };
 
   // 3. State update functions passed to sheets

@@ -138,7 +138,10 @@ export default function BankDepositSheet({
     const reader = new FileReader();
     reader.onload = (event) => {
       const resultStr = event.target?.result as string;
-      if (!resultStr) return;
+      if (!resultStr) {
+        if (fileInput) fileInput.value = '';
+        return;
+      }
 
       const img = new window.Image();
       img.onload = () => {
@@ -146,7 +149,7 @@ export default function BankDepositSheet({
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          const MAX_DIM = 800;
+          const MAX_DIM = 450;
 
           if (width > MAX_DIM || height > MAX_DIM) {
             if (width > height) {
@@ -163,22 +166,27 @@ export default function BankDepositSheet({
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.65);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.42);
             setter(compressedDataUrl);
           } else {
             setter(resultStr);
           }
         } catch {
           setter(resultStr);
+        } finally {
+          if (fileInput) fileInput.value = '';
         }
       };
       img.onerror = () => {
         setter(resultStr);
+        if (fileInput) fileInput.value = '';
       };
       img.src = resultStr;
     };
+    reader.onerror = () => {
+      if (fileInput) fileInput.value = '';
+    };
     reader.readAsDataURL(file);
-    fileInput.value = '';
   };
 
   // --- DEPOSIT SUBMIT ---

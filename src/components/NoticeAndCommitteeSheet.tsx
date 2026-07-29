@@ -465,24 +465,66 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
     }
   };
 
-  // File Upload base64 transformer
+  // File Upload base64 transformer with Canvas Compression
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'member' | 'sig') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1.5 * 1024 * 1024) {
-      alert("ফাইলের সাইজ অনেক বড়! অনুগ্রহ করে ১.৫ MB এর চেয়ে ছোট ছবি আপলোড করুন।");
-      return;
-    }
-
+    const fileInput = e.target;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      if (type === 'member') {
-        setMemberFormPhoto(base64String);
-      } else {
-        setSigFormPhoto(base64String);
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) {
+        if (fileInput) fileInput.value = '';
+        return;
       }
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_DIM = 400;
+
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.40);
+            if (type === 'member') setMemberFormPhoto(compressed);
+            else setSigFormPhoto(compressed);
+          } else {
+            if (type === 'member') setMemberFormPhoto(dataUrl);
+            else setSigFormPhoto(dataUrl);
+          }
+        } catch {
+          if (type === 'member') setMemberFormPhoto(dataUrl);
+          else setSigFormPhoto(dataUrl);
+        } finally {
+          if (fileInput) fileInput.value = '';
+        }
+      };
+      img.onerror = () => {
+        if (type === 'member') setMemberFormPhoto(dataUrl);
+        else setSigFormPhoto(dataUrl);
+        if (fileInput) fileInput.value = '';
+      };
+      img.src = dataUrl;
+    };
+    reader.onerror = () => {
+      if (fileInput) fileInput.value = '';
     };
     reader.readAsDataURL(file);
   };

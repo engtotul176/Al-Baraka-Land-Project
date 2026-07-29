@@ -405,14 +405,17 @@ export default function MembersSheet({
                     const reader = new FileReader();
                     reader.onload = (event) => {
                       const dataUrl = event.target?.result as string;
-                      if (!dataUrl) return;
+                      if (!dataUrl) {
+                        if (inputEl) inputEl.value = '';
+                        return;
+                      }
                       const img = new window.Image();
                       img.onload = () => {
                         try {
                           const canvas = document.createElement('canvas');
                           let width = img.width;
                           let height = img.height;
-                          const MAX_DIM = 600;
+                          const MAX_DIM = 400;
                           if (width > MAX_DIM || height > MAX_DIM) {
                             if (width > height) {
                               height = Math.round((height * MAX_DIM) / width);
@@ -427,19 +430,26 @@ export default function MembersSheet({
                           const ctx = canvas.getContext('2d');
                           if (ctx) {
                             ctx.drawImage(img, 0, 0, width, height);
-                            setPhoto(canvas.toDataURL('image/jpeg', 0.65));
+                            setPhoto(canvas.toDataURL('image/jpeg', 0.40));
                           } else {
                             setPhoto(dataUrl);
                           }
                         } catch {
                           setPhoto(dataUrl);
+                        } finally {
+                          if (inputEl) inputEl.value = '';
                         }
                       };
-                      img.onerror = () => setPhoto(dataUrl);
+                      img.onerror = () => {
+                        setPhoto(dataUrl);
+                        if (inputEl) inputEl.value = '';
+                      };
                       img.src = dataUrl;
                     };
+                    reader.onerror = () => {
+                      if (inputEl) inputEl.value = '';
+                    };
                     reader.readAsDataURL(file);
-                    inputEl.value = '';
                   }}
                   className="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                 />
