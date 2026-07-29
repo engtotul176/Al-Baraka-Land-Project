@@ -58,13 +58,12 @@ export default function TickerBanner({
       <div className="max-w-7xl mx-auto flex items-stretch overflow-hidden text-xs font-sans">
         
         {/* Ticker Fixed Header Tag */}
-        <div className="bg-amber-500 text-slate-950 px-3.5 py-2 font-extrabold flex items-center gap-1.5 shrink-0 uppercase tracking-wider shadow-md select-none z-10">
+        <div className="bg-amber-500 text-slate-950 px-3 py-2 font-extrabold flex items-center justify-center gap-1.5 shrink-0 shadow-md select-none z-10" title="জরুরি ঘোষণা ও নোটিশ">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-900 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-900"></span>
           </span>
-          <Bell size={13} className="animate-bounce" />
-          <span>লাইভ আপডেট</span>
+          <Bell size={15} className="animate-bounce text-slate-950" />
         </div>
 
         {/* Scrolling Marquee Container */}
@@ -120,26 +119,7 @@ export default function TickerBanner({
           </div>
         </div>
 
-        {/* Action controls (Sound toggle & Audio test) */}
-        <div className="bg-slate-900 px-3 py-1.5 border-l border-slate-800 flex items-center gap-1.5 shrink-0 z-10">
-          <button
-            onClick={() => {
-              onToggleSound();
-              if (!soundEnabled) {
-                audioSynth.playChime();
-              }
-            }}
-            className={`p-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 text-[11px] font-bold ${
-              soundEnabled 
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30' 
-                : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-            }`}
-            title={soundEnabled ? "পপ-আপ অ্যালার্ট সাউন্ড চালু আছে (বন্ধ করতে ক্লিক করুন)" : "সাউন্ড বন্ধ (চালু করতে ক্লিক করুন)"}
-          >
-            {soundEnabled ? <Volume2 size={14} className="text-amber-400 animate-pulse" /> : <VolumeX size={14} />}
-            <span className="hidden sm:inline">{soundEnabled ? "শব্দ চালু" : "শব্দ বন্ধ"}</span>
-          </button>
-        </div>
+        {/* End Scrolling Container */}
 
       </div>
 

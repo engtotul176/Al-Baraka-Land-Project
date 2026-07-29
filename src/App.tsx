@@ -1062,7 +1062,7 @@ export default function App() {
         <nav className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 no-print pb-px">
           {(loggedInUser?.role === 'admin' 
             ? TABS_METADATA 
-            : TABS_METADATA.filter(t => ['dashboard', 'ledger', 'receipt', 'reports', 'manual', 'committee'].includes(t.id))
+            : TABS_METADATA.filter(t => ['dashboard', 'members', 'ledger', 'receipt', 'reports', 'manual', 'committee'].includes(t.id))
           ).map(tab => {
             const IconComp = tab.icon;
             const isActive = activeTab === tab.id;

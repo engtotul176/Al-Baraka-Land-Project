@@ -119,15 +119,15 @@ export function compressBase64Image(
 
 // Synchronous string shrinker for emergency quota recovery
 function shrinkStringImage(dataUrl: string): string {
-  if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/') && dataUrl.length > 50000) {
-    // If we cannot do async canvas in a sync loop, we can truncate extremely huge metadata or keep placeholder if emergency
-    return dataUrl;
+  if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
+    // Return empty or truncated string for localStorage fallback so it fits quota
+    return '';
   }
   return dataUrl;
 }
 
 /**
- * Traverses an array/object and downsizes oversized image fields.
+ * Traverses an array/object and strips oversized image fields for localStorage fallback.
  */
 export function optimizeDataForQuota(data: any): any {
   if (!data) return data;
@@ -136,9 +136,9 @@ export function optimizeDataForQuota(data: any): any {
     return data.map((item) => {
       if (item && typeof item === 'object') {
         const copy = { ...item };
-        // Common image fields in app: depositSlipUrl, photo, attachment, logo
+        // Common image fields in app: depositSlipUrl, photo, attachment, logo, receiptUrl
         for (const key of ['depositSlipUrl', 'photo', 'attachment', 'logo', 'receiptUrl']) {
-          if (typeof copy[key] === 'string' && copy[key].length > 60000) {
+          if (typeof copy[key] === 'string' && copy[key].length > 1000) {
             copy[key] = shrinkStringImage(copy[key]);
           }
         }
@@ -151,7 +151,7 @@ export function optimizeDataForQuota(data: any): any {
   if (typeof data === 'object') {
     const copy = { ...data };
     for (const key in copy) {
-      if (typeof copy[key] === 'string' && copy[key].length > 60000) {
+      if (typeof copy[key] === 'string' && copy[key].length > 1000) {
         copy[key] = shrinkStringImage(copy[key]);
       }
     }
@@ -165,30 +165,26 @@ export function optimizeDataForQuota(data: any): any {
 
 /**
  * Safely writes data to localStorage.
- * Catches QuotaExceededError and optimizes image payload or uses IndexedDB.
+ * Catches QuotaExceededError and optimizes image payload or relies on IndexedDB.
  */
 export function safeSetLocalStorage(key: string, value: any): void {
   const jsonStr = typeof value === 'string' ? value : JSON.stringify(value);
 
-  // Always save to IndexedDB as background backup
+  // Always save full data to IndexedDB as background database
   idbSet(key, typeof value === 'string' ? JSON.parse(value) : value);
 
   try {
     localStorage.setItem(key, jsonStr);
   } catch (err: any) {
-    console.warn(`[safeSetLocalStorage] QuotaExceededError for "${key}". Optimizing payload...`, err);
-
     try {
-      // 1. Optimize payload synchronously
+      // Optimize payload synchronously by trimming heavy image strings for localStorage
       const rawObj = typeof value === 'string' ? JSON.parse(value) : value;
       const optimized = optimizeDataForQuota(rawObj);
       const newStr = JSON.stringify(optimized);
 
       localStorage.setItem(key, newStr);
-      console.log(`[safeSetLocalStorage] Successfully saved "${key}" after quota optimization!`);
     } catch (err2: any) {
-      console.error(`[safeSetLocalStorage] Could not save "${key}" to localStorage even after optimization. Saved to IndexedDB.`, err2);
-      // Data is safely stored in IndexedDB via idbSet above!
+      // Full data is securely preserved in IndexedDB via idbSet!
     }
   }
 }
