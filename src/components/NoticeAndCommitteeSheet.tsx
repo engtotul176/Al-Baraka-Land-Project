@@ -16,6 +16,8 @@ interface Notice {
   date: string;
   category: 'General' | 'Urgent' | 'Meeting';
   active: boolean;
+  isTicker?: boolean;
+  isPopup?: boolean;
 }
 
 interface CommitteeMember {
@@ -63,7 +65,9 @@ const DEFAULT_NOTICES: Notice[] = [
     content: 'সকল সম্মানিত সদস্যদের অবগতির জন্য জানানো যাচ্ছে যে, ২০২৬ সালের জানুয়ারি ও ফেব্রুয়ারি মাসের মাসিক সঞ্চয় (২,০০০ টাকা হারে) এবং রেজিস্ট্রেশন ফি পরিশোধের জন্য অনুরোধ করা হলো। নির্দিষ্ট সময়ের মধ্যে পরিশোধ করে রশিদ বুঝে নিন।',
     date: '2026-01-10',
     category: 'Urgent',
-    active: true
+    active: true,
+    isTicker: true,
+    isPopup: true
   },
   {
     id: 'notice-2',
@@ -71,7 +75,9 @@ const DEFAULT_NOTICES: Notice[] = [
     content: 'আল-বারাকা ভূমি প্রকল্পের আসন্ন বার্ষিক সাধারণ সভা আগামী মাসের ১০ তারিখ রোজ শুক্রবার সকাল ১০:০০ ঘটিকায় আমাদের নিজস্ব কার্যালয়ে অনুষ্ঠিত হবে। সকল সদস্যকে যথাসময়ে উপস্থিত থেকে মূল্যবান মতামত দেওয়ার জন্য বিনীত অনুরোধ রইল।',
     date: '2026-02-15',
     category: 'Meeting',
-    active: true
+    active: true,
+    isTicker: true,
+    isPopup: false
   },
   {
     id: 'notice-3',
@@ -79,7 +85,9 @@ const DEFAULT_NOTICES: Notice[] = [
     content: 'আমাদের প্রকল্পের সকল লেনদেন জনতা ব্যাংক পিএলসি, ময়মনসিংহ শাখার হিসাব নম্বর: ০১০০২৯৪২৭৮৫৫৩ এর মাধ্যমে পরিচালিত হচ্ছে। সকল ব্যাংক জমা স্লিপ ও হিসাব বিবরণী সরাসরি "আর্থিক রিপোর্ট" ট্যাব থেকে দেখতে পারবেন।',
     date: '2026-03-01',
     category: 'General',
-    active: true
+    active: true,
+    isTicker: true,
+    isPopup: false
   }
 ];
 
@@ -187,6 +195,8 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
   const [noticeCategory, setNoticeCategory] = useState<'General' | 'Urgent' | 'Meeting'>('General');
+  const [noticeIsTicker, setNoticeIsTicker] = useState(true);
+  const [noticeIsPopup, setNoticeIsPopup] = useState(true);
   const [showNoticeForm, setShowNoticeForm] = useState(false);
 
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
@@ -325,7 +335,7 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
     if (editingNoticeId) {
       const updated = notices.map(n => 
         n.id === editingNoticeId 
-          ? { ...n, title: noticeTitle, content: noticeContent, category: noticeCategory } 
+          ? { ...n, title: noticeTitle, content: noticeContent, category: noticeCategory, isTicker: noticeIsTicker, isPopup: noticeIsPopup } 
           : n
       );
       saveNotices(updated);
@@ -338,7 +348,9 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
         content: noticeContent,
         category: noticeCategory,
         date: new Date().toISOString().split('T')[0],
-        active: true
+        active: true,
+        isTicker: noticeIsTicker,
+        isPopup: noticeIsPopup
       };
       saveNotices([newNotice, ...notices]);
       alert("নতুন নোটিশ সফলভাবে জারি করা হয়েছে!");
@@ -348,6 +360,8 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
     setNoticeTitle('');
     setNoticeContent('');
     setNoticeCategory('General');
+    setNoticeIsTicker(true);
+    setNoticeIsPopup(true);
     setShowNoticeForm(false);
   };
 
@@ -356,6 +370,8 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
     setNoticeTitle(n.title);
     setNoticeContent(n.content);
     setNoticeCategory(n.category);
+    setNoticeIsTicker(n.isTicker !== false);
+    setNoticeIsPopup(n.isPopup !== false);
     setShowNoticeForm(true);
   };
 
@@ -368,6 +384,16 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
 
   const toggleNoticeActive = (id: string) => {
     const updated = notices.map(n => n.id === id ? { ...n, active: !n.active } : n);
+    saveNotices(updated);
+  };
+
+  const toggleNoticeTicker = (id: string) => {
+    const updated = notices.map(n => n.id === id ? { ...n, isTicker: !(n.isTicker !== false) } : n);
+    saveNotices(updated);
+  };
+
+  const toggleNoticePopup = (id: string) => {
+    const updated = notices.map(n => n.id === id ? { ...n, isPopup: !(n.isPopup !== false) } : n);
     saveNotices(updated);
   };
 
@@ -651,6 +677,28 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
                       />
                     </div>
 
+                    {/* Ticker & Popup Options */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-amber-50/60 rounded-xl border border-amber-200/80 text-xs">
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={noticeIsTicker}
+                          onChange={(e) => setNoticeIsTicker(e.target.checked)}
+                          className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
+                        />
+                        📜 স্ক্রলিং টিকারে দেখান (Display on Live Ticker)
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={noticeIsPopup}
+                          onChange={(e) => setNoticeIsPopup(e.target.checked)}
+                          className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
+                        />
+                        🔔 পপ-আপ অ্যালার্ট ও সাউন্ড পাঠাবে (Pop-up & Sound)
+                      </label>
+                    </div>
+
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
@@ -707,6 +755,16 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
                             📢 সাধারণ বিজ্ঞপ্তি
                           </span>
                         )}
+                        {notice.isTicker !== false && (
+                          <span className="px-2 py-0.5 bg-amber-100 text-amber-900 text-[10px] font-bold rounded-full flex items-center gap-1">
+                            📜 টিকারে সচল
+                          </span>
+                        )}
+                        {notice.isPopup !== false && (
+                          <span className="px-2 py-0.5 bg-purple-100 text-purple-900 text-[10px] font-bold rounded-full flex items-center gap-1">
+                            🔔 পপ-আপ অ্যালার্ট
+                          </span>
+                        )}
                         <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 font-medium">
                           <Calendar size={11} />
                           {toBanglaDigits(notice.date)}
@@ -717,6 +775,28 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
                       {isAdmin && (
                         <div className="flex items-center gap-2">
                           <button
+                            onClick={() => toggleNoticeTicker(notice.id)}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border cursor-pointer ${
+                              notice.isTicker !== false 
+                                ? 'bg-amber-50 text-amber-800 border-amber-300' 
+                                : 'bg-slate-50 text-slate-400 border-slate-200'
+                            }`}
+                            title="টিকারে প্রদর্শন চালু/বন্ধ করুন"
+                          >
+                            📜 টিকারে
+                          </button>
+                          <button
+                            onClick={() => toggleNoticePopup(notice.id)}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border cursor-pointer ${
+                              notice.isPopup !== false 
+                                ? 'bg-purple-50 text-purple-800 border-purple-300' 
+                                : 'bg-slate-50 text-slate-400 border-slate-200'
+                            }`}
+                            title="পপ-আপ অ্যালার্ট ও সাউন্ড চালু/বন্ধ করুন"
+                          >
+                            🔔 পপ-আপ
+                          </button>
+                          <button
                             onClick={() => toggleNoticeActive(notice.id)}
                             className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border cursor-pointer ${
                               notice.active 
@@ -724,7 +804,7 @@ export default function NoticeAndCommitteeSheet({ isAdmin = false }: NoticeAndCo
                                 : 'bg-slate-50 text-slate-500 border-slate-200'
                             }`}
                           >
-                            {notice.active ? 'সচল (Active)' : 'নিষ্ক্রিয় (Inactive)'}
+                            {notice.active ? 'সচল' : 'নিষ্ক্রিয়'}
                           </button>
                           <button
                             onClick={() => startEditNotice(notice)}

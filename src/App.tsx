@@ -30,6 +30,8 @@ import GoogleAppsScriptSheet from './components/GoogleAppsScriptSheet';
 import ManualSheet from './components/ManualSheet';
 import SettingsSheet from './components/SettingsSheet';
 import NoticeAndCommitteeSheet from './components/NoticeAndCommitteeSheet';
+import TickerBanner, { TickerItem } from './components/TickerBanner';
+import PopUpNoticeModal, { PopUpNoticeData } from './components/PopUpNoticeModal';
 
 // Lucide Icons
 import { 
@@ -76,6 +78,52 @@ export default function App() {
   // Cloud Sync Status states
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+
+  // Ticker and Pop-up Notification States
+  const [tickerItems, setTickerItems] = useState<TickerItem[]>([]);
+  const [selectedPopupNotice, setSelectedPopupNotice] = useState<PopUpNoticeData | null>(null);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [dismissedSessionNoticeId, setDismissedSessionNoticeId] = useState<string | null>(null);
+
+  // Refresh active notices for Ticker and Pop-up
+  const refreshTickerAndNotices = () => {
+    try {
+      const stored = localStorage.getItem('ab_custom_notices');
+      let noticeList: any[] = [];
+      if (stored) {
+        noticeList = JSON.parse(stored);
+      }
+      
+      // Filter active ticker items
+      const activeItems: TickerItem[] = noticeList
+        .filter((n: any) => n.active !== false && n.isTicker !== false)
+        .map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          date: n.date,
+          category: n.category || 'General',
+          isUrgent: n.category === 'Urgent'
+        }));
+
+      setTickerItems(activeItems);
+
+      // Trigger Pop-up Modal for the top urgent / active notice if not dismissed
+      const urgentPopup = noticeList.find((n: any) => n.active !== false && n.isPopup !== false);
+      if (urgentPopup && urgentPopup.id !== dismissedSessionNoticeId) {
+        setSelectedPopupNotice({
+          id: urgentPopup.id,
+          title: urgentPopup.title,
+          content: urgentPopup.content,
+          date: urgentPopup.date,
+          category: urgentPopup.category || 'General'
+        });
+      }
+    } catch (e) {
+      console.error("Error reading notices for ticker:", e);
+    }
+  };
 
   // Cloud Sync Function
   const syncFromCloud = async (currentSettings: SystemSettings = settings) => {
@@ -332,6 +380,9 @@ export default function App() {
         // Fallback
         setIsAdmin(true);
       }
+
+      // Refresh notices for live ticker and pop-up modal
+      refreshTickerAndNotices();
     } catch (error) {
       console.error("Error reading from localStorage:", error);
     }
@@ -341,6 +392,13 @@ export default function App() {
       syncFromCloud(activeSettings);
     }
   }, []);
+
+  // Effect to continuously sync ticker & popup when tab changes or localstorage updates
+  useEffect(() => {
+    refreshTickerAndNotices();
+    const interval = setInterval(refreshTickerAndNotices, 4000);
+    return () => clearInterval(interval);
+  }, [activeTab, dismissedSessionNoticeId]);
 
   // 2. Persist state changes
   const saveMembers = (updated: Member[]) => {
@@ -981,6 +1039,23 @@ export default function App() {
         </div>
       </header>
 
+      {/* Live Scrolling Ticker Banner */}
+      <TickerBanner
+        items={tickerItems}
+        soundEnabled={soundEnabled}
+        onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        onSelectItem={(item) => {
+          setSelectedPopupNotice({
+            id: item.id,
+            title: item.title,
+            content: item.content,
+            date: item.date,
+            category: item.category === 'Urgent' ? 'Urgent' : 'General'
+          });
+          setIsPopupOpen(true);
+        }}
+      />
+
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
         {/* Workbook Sheet Tabs Selector (No Print) */}
@@ -1069,6 +1144,7 @@ export default function App() {
               bankWithdrawals={bankWithdrawals}
               expenses={expenses}
               payments={payments}
+              settings={settings}
               onAddBankDeposit={handleAddBankDeposit}
               onUpdateBankDeposit={handleUpdateBankDeposit}
               onDeleteBankDeposit={handleDeleteBankDeposit}
@@ -1153,6 +1229,21 @@ export default function App() {
           রিয়েল-টাইম ডাটা ইন্টিগ্রেশন এবং লোকাল স্টোরেজ দ্বারা পরিচালিত।
         </p>
       </footer>
+
+      {/* Real-time Pop-up Notice Alert Modal */}
+      <PopUpNoticeModal
+        notice={selectedPopupNotice}
+        isOpen={isPopupOpen}
+        soundEnabled={soundEnabled}
+        onClose={() => setIsPopupOpen(false)}
+        onDismissForever={() => {
+          if (selectedPopupNotice) {
+            setDismissedSessionNoticeId(selectedPopupNotice.id);
+          }
+          setIsPopupOpen(false);
+        }}
+        onGoToNoticeBoard={() => setActiveTab('committee')}
+      />
     </div>
   );
 }

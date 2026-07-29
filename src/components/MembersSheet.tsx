@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Member } from '../types';
 import { toBanglaDigits } from '../utils';
-import { Search, UserPlus, Edit2, Check, X, ShieldAlert, FileSpreadsheet, Eye, UserX, Trash2 } from 'lucide-react';
+import { Search, UserPlus, Edit2, Check, X, ShieldAlert, FileSpreadsheet, Eye, Trash2, Printer, Users } from 'lucide-react';
 
 interface MembersSheetProps {
   members: Member[];
@@ -30,6 +30,7 @@ export default function MembersSheet({
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [showPrintDirectory, setShowPrintDirectory] = useState(false);
 
   // Form State
   const [memberId, setMemberId] = useState('');
@@ -178,19 +179,32 @@ export default function MembersSheet({
             এখানে আপনার প্রকল্পের সকল সদস্যের সম্পূর্ণ তালিকা ও প্রোফাইল সংরক্ষিত রয়েছে।
           </p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={showAddForm ? resetForm : openNewForm}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer ${
-              showAddForm 
-                ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' 
-                : 'bg-primary text-white hover:bg-primary-light border border-primary'
-            }`}
-          >
-            {showAddForm ? <X size={16} /> : <UserPlus size={16} />}
-            {showAddForm ? 'ফরম বন্ধ করুন' : 'নতুন সদস্য যুক্ত করুন'}
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => setShowPrintDirectory(true)}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 shadow-sm transition-all cursor-pointer"
+              title="এক পেজে সদস্য তালিকা কম্প্যাক্ট প্রিন্ট করুন (শুধুমাত্র অ্যাডমিন)"
+            >
+              <Printer size={16} className="text-amber-700" />
+              <span>প্রিন্ট মেম্বার ডিরেক্টরি</span>
+            </button>
+          )}
+
+          {isAdmin && (
+            <button
+              onClick={showAddForm ? resetForm : openNewForm}
+              className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                showAddForm 
+                  ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200' 
+                  : 'bg-primary text-white hover:bg-primary-light border border-primary'
+              }`}
+            >
+              {showAddForm ? <X size={16} /> : <UserPlus size={16} />}
+              {showAddForm ? 'ফরম বন্ধ করুন' : 'নতুন সদস্য যুক্ত করুন'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Dynamic Member Add/Edit Form Box */}
@@ -623,6 +637,115 @@ export default function MembersSheet({
           </table>
         </div>
       </div>
+
+      {/* One-Page Compact Member Directory Print Modal (Admin Only) */}
+      {isAdmin && showPrintDirectory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto animate-fadeIn">
+          <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6">
+            
+            {/* Modal Controls Bar (Hidden during actual print) */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between no-print">
+              <div className="flex items-center gap-2">
+                <Printer className="text-amber-400" size={18} />
+                <h3 className="font-bold text-sm">এক পেজে সদস্য তালিকা কম্প্যাক্ট প্রিন্ট প্রিভিউ (অ্যাডমিন মোড)</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow"
+                >
+                  <Printer size={15} />
+                  প্রিন্ট করুন (Print A4)
+                </button>
+                <button
+                  onClick={() => setShowPrintDirectory(false)}
+                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors cursor-pointer"
+                  title="বন্ধ করুন"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Document Area */}
+            <div className="p-6 md:p-8 bg-white text-slate-900 space-y-4 print-container">
+              {/* Document Header */}
+              <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                  আল-বারাকা ভূমি প্রকল্প
+                </h1>
+                <p className="text-xs text-slate-600 font-medium">
+                  ময়মনসিংহ শাখা, মোবাইল: ০১৭০০০-০০০০০০ | ব্যাংক হিসাব: ০১০০২৯৪২৭৮৫৫৩ (জনতা ব্যাংক পিএলসি)
+                </p>
+                <div className="inline-block px-4 py-1 bg-slate-100 rounded-full text-xs font-extrabold text-slate-800 uppercase tracking-widest mt-1 border border-slate-300">
+                  অফিসিয়াল সকল সদস্য ডিরেক্টরি (Member Directory)
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 font-mono">
+                  <span>প্রিন্টের তারিখ: {toBanglaDigits(new Date().toISOString().split('T')[0])}</span>
+                  <span>মোট ডাটাবেজ সদস্য: {toBanglaDigits(members.length)} জন</span>
+                </div>
+              </div>
+
+              {/* Compact Members Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-[11px] border border-slate-300">
+                  <thead>
+                    <tr className="bg-slate-800 text-white font-bold border-b border-slate-900">
+                      <th className="p-2 border border-slate-400 text-center w-12">আইডি</th>
+                      <th className="p-2 border border-slate-400">ছবি ও সদস্যের নাম</th>
+                      <th className="p-2 border border-slate-400">পিতার নাম</th>
+                      <th className="p-2 border border-slate-400 text-center">মোবাইল নম্বর</th>
+                      <th className="p-2 border border-slate-400">পেশা</th>
+                      <th className="p-2 border border-slate-400 text-center">জাতীয় পরিচয়পত্র (NID)</th>
+                      <th className="p-2 border border-slate-400 text-center">স্ট্যাটাস</th>
+                      <th className="p-2 border border-slate-400">মনোনীত ব্যক্তি</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-300">
+                    {members.map((m) => (
+                      <tr key={m.memberId} className="hover:bg-slate-50 leading-tight">
+                        <td className="p-2 border border-slate-300 text-center font-bold font-mono">{m.memberId}</td>
+                        <td className="p-2 border border-slate-300 font-bold text-slate-900">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full border border-slate-300 overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center">
+                              {m.photo ? (
+                                <img src={m.photo} alt={m.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="text-[7px] text-slate-400 font-bold">X</div>
+                              )}
+                            </div>
+                            <span>{m.name}</span>
+                          </div>
+                        </td>
+                        <td className="p-2 border border-slate-300 text-slate-600">{m.fatherName || '―'}</td>
+                        <td className="p-2 border border-slate-300 text-center font-mono font-bold">{toBanglaDigits(m.mobile)}</td>
+                        <td className="p-2 border border-slate-300">{m.profession || '―'}</td>
+                        <td className="p-2 border border-slate-300 text-center font-mono">{toBanglaDigits(m.nid) || '―'}</td>
+                        <td className="p-2 border border-slate-300 text-center">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            m.status === 'Active' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'
+                          }`}>
+                            {m.status === 'Active' ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
+                          </span>
+                        </td>
+                        <td className="p-2 border border-slate-300">{m.nominee || '―'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Document Signatures */}
+              <div className="pt-12 grid grid-cols-3 gap-4 text-center text-[11px] font-bold text-slate-700">
+                <div className="border-t border-slate-400 pt-1">ক্যাশিয়ার signature</div>
+                <div className="border-t border-slate-400 pt-1">সাধারণ সম্পাদক signature</div>
+                <div className="border-t border-slate-400 pt-1">সভাপতি signature</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

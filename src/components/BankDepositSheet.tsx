@@ -4,8 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { BankDeposit, BankWithdrawal, ExpenseEntry, Payment, ExpenseCategory } from '../types';
-import { toBanglaDigits, formatCurrencyBangla } from '../utils';
+import { BankDeposit, BankWithdrawal, ExpenseEntry, Payment, ExpenseCategory, SystemSettings } from '../types';
+import { toBanglaDigits, formatCurrencyBangla, toBanglaWords } from '../utils';
 import { 
   Landmark, 
   ArrowRight, 
@@ -22,7 +22,8 @@ import {
   ArrowDownLeft, 
   Receipt, 
   PieChart, 
-  FileText 
+  FileText,
+  Printer 
 } from 'lucide-react';
 
 interface BankDepositSheetProps {
@@ -30,6 +31,7 @@ interface BankDepositSheetProps {
   bankWithdrawals: BankWithdrawal[];
   expenses: ExpenseEntry[];
   payments: Payment[];
+  settings?: SystemSettings;
   onAddBankDeposit: (deposit: BankDeposit) => void;
   onUpdateBankDeposit: (deposit: BankDeposit) => void;
   onDeleteBankDeposit: (id: string) => void;
@@ -47,6 +49,7 @@ export default function BankDepositSheet({
   bankWithdrawals,
   expenses,
   payments,
+  settings,
   onAddBankDeposit,
   onUpdateBankDeposit,
   onDeleteBankDeposit,
@@ -58,10 +61,25 @@ export default function BankDepositSheet({
   onDeleteExpense,
   isAdmin = true
 }: BankDepositSheetProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'deposits' | 'withdrawals' | 'expenses' | 'summary'>('deposits');
+  const [activeSubTab, setActiveSubTab] = useState<'deposits' | 'withdrawals' | 'expenses' | 'statement' | 'summary'>('deposits');
   
   // Modal Photo Preview State
   const [viewingPhoto, setViewingPhoto] = useState<{ title: string; url: string } | null>(null);
+
+  // Modal Print Voucher States
+  const [printingDeposit, setPrintingDeposit] = useState<BankDeposit | null>(null);
+  const [printingWithdrawal, setPrintingWithdrawal] = useState<BankWithdrawal | null>(null);
+  const [printingExpense, setPrintingExpense] = useState<ExpenseEntry | null>(null);
+
+  // --- Statement Filter States ---
+  const [stmtStartDate, setStmtStartDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 3); // Default last 3 months
+    return d.toISOString().split('T')[0];
+  });
+  const [stmtEndDate, setStmtEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [stmtSelectedBank, setStmtSelectedBank] = useState<string>('ALL');
+  const [isPrintingStatementModalOpen, setIsPrintingStatementModalOpen] = useState(false);
 
   // --- Deposit Form States ---
   const [showDepositForm, setShowDepositForm] = useState(false);
@@ -127,6 +145,74 @@ export default function BankDepositSheet({
     .filter(e => e.category === 'FDR')
     .reduce((sum, e) => sum + e.amount, 0);
   const totalFDRBalance = fdrFromWithdrawals + fdrFromExpenses;
+
+  // --- Bank Statement Calculations ---
+  // Unique Bank List
+  const uniqueBankNames = Array.from(
+    new Set([...bankDeposits.map(b => b.bankName), ...bankWithdrawals.map(w => w.bankName)])
+  ).filter(Boolean);
+
+  // Opening balance calculation (transactions before stmtStartDate)
+  const openingDeposits = bankDeposits
+    .filter(b => (stmtSelectedBank === 'ALL' || b.bankName === stmtSelectedBank) && b.date < stmtStartDate)
+    .reduce((sum, b) => sum + b.amount, 0);
+
+  const openingWithdrawals = bankWithdrawals
+    .filter(w => (stmtSelectedBank === 'ALL' || w.bankName === stmtSelectedBank) && w.date < stmtStartDate)
+    .reduce((sum, w) => sum + w.amount, 0);
+
+  const statementOpeningBalance = openingDeposits - openingWithdrawals;
+
+  // Period Deposits & Withdrawals (stmtStartDate <= date <= stmtEndDate)
+  const periodDeposits = bankDeposits.filter(
+    b => (stmtSelectedBank === 'ALL' || b.bankName === stmtSelectedBank) && b.date >= stmtStartDate && b.date <= stmtEndDate
+  );
+
+  const periodWithdrawals = bankWithdrawals.filter(
+    w => (stmtSelectedBank === 'ALL' || w.bankName === stmtSelectedBank) && w.date >= stmtStartDate && w.date <= stmtEndDate
+  );
+
+  // Merge items into chronological statement entries
+  const rawStatementItems = [
+    ...periodDeposits.map(b => ({
+      id: b.id,
+      date: b.date,
+      type: 'DEPOSIT' as const,
+      bankName: b.bankName,
+      branch: b.branch,
+      refNumber: b.slipNumber,
+      particulars: b.reference || 'ব্যাংক জমা (ডিপোজিট)',
+      depositAmount: b.amount,
+      withdrawalAmount: 0,
+      photo: b.slipPhoto
+    })),
+    ...periodWithdrawals.map(w => ({
+      id: w.id,
+      date: w.date,
+      type: 'WITHDRAWAL' as const,
+      bankName: w.bankName,
+      branch: w.branch,
+      refNumber: w.chequeNumber,
+      particulars: w.reference || (w.withdrawPurpose === 'Cash in Hand' ? 'নগদ উত্তোলিত ক্যাশ' : w.withdrawPurpose === 'FDR Investment' ? 'এফডিআর স্কিম ফান্ড' : 'প্রজেক্ট খরচ'),
+      depositAmount: 0,
+      withdrawalAmount: w.amount,
+      photo: w.chequePhoto
+    }))
+  ].sort((a, b) => a.date.localeCompare(b.date));
+
+  // Compute Running Balance for each line
+  let runningBalTracker = statementOpeningBalance;
+  const statementLedger = rawStatementItems.map(item => {
+    runningBalTracker = runningBalTracker + item.depositAmount - item.withdrawalAmount;
+    return {
+      ...item,
+      runningBalance: runningBalTracker
+    };
+  });
+
+  const statementPeriodTotalDeposits = periodDeposits.reduce((sum, b) => sum + b.amount, 0);
+  const statementPeriodTotalWithdrawals = periodWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+  const statementClosingBalance = statementOpeningBalance + statementPeriodTotalDeposits - statementPeriodTotalWithdrawals;
 
   // Image Upload Handler Helper with Automatic Canvas Compression (to avoid >1MB Firestore document limit)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) => {
@@ -216,7 +302,7 @@ export default function BankDepositSheet({
       onAddBankDeposit(payload);
       alert("ব্যাংক ডিপোজিট সফলভাবে নথিভুক্ত করা হয়েছে!");
     }
-    
+    setPrintingDeposit(payload);
     resetDepositForm();
   };
 
@@ -433,6 +519,15 @@ export default function BankDepositSheet({
             খরচ রেজিস্টার ({toBanglaDigits(expenses.length)})
           </button>
           <button
+            onClick={() => setActiveSubTab('statement')}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+              activeSubTab === 'statement' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <FileText size={13} className="text-sky-400" />
+            ব্যাংক স্টেটমেন্ট ও রিপোর্ট
+          </button>
+          <button
             onClick={() => setActiveSubTab('summary')}
             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
               activeSubTab === 'summary' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'
@@ -647,6 +742,7 @@ export default function BankDepositSheet({
                       <th className="p-3 text-center">স্লিপ নং</th>
                       <th className="p-3">রেফারেন্স</th>
                       <th className="p-3 text-center">স্লিপ ছবি</th>
+                      <th className="p-3 text-center">চালান প্রিন্ট</th>
                       {isAdmin && <th className="p-3 text-center">অ্যাকশন</th>}
                     </tr>
                   </thead>
@@ -675,6 +771,15 @@ export default function BankDepositSheet({
                               <span className="text-slate-400">―</span>
                             )}
                           </td>
+                          <td className="p-3 text-center">
+                            <button
+                              onClick={() => setPrintingDeposit(b)}
+                              className="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg flex items-center justify-center gap-1 mx-auto border-0 cursor-pointer text-[10px] shadow-xs"
+                              title="ব্যাংক ডিপোজিট চালান প্রিন্ট করুন"
+                            >
+                              <Printer size={12} /> প্রিন্ট
+                            </button>
+                          </td>
                           {isAdmin && (
                             <td className="p-3 text-center">
                               <div className="flex items-center justify-center gap-1.5">
@@ -691,7 +796,7 @@ export default function BankDepositSheet({
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={isAdmin ? 8 : 7} className="p-8 text-center text-slate-400">
+                        <td colSpan={isAdmin ? 9 : 8} className="p-8 text-center text-slate-400">
                           কোনো ব্যাংক জমা তথ্য পাওয়া যায়নি।
                         </td>
                       </tr>
@@ -1195,7 +1300,274 @@ export default function BankDepositSheet({
         </div>
       )}
 
-      {/* --- SUB-TAB 4: FUND & FDR SUMMARY --- */}
+      {/* --- SUB-TAB 4: BANK STATEMENT & REPORTS --- */}
+      {activeSubTab === 'statement' && (
+        <div className="space-y-6">
+          {/* Top Filter Toolbar */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-primary flex items-center gap-2">
+                  <FileText className="text-sky-600" size={18} />
+                  ব্যাংক স্টেটমেন্ট ও লেনদেন হিসাব বিবরণী (Official Bank Statement)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  নির্দিষ্ট মেয়াদের ব্যাংকে জমা, চেক মারফত উত্তোলন, প্রারম্ভিক ও সমাপনী ব্যালেন্সের নিখুঁত স্টেটমেন্ট।
+                </p>
+              </div>
+
+              {/* Print Statement Action Button */}
+              <button
+                onClick={() => setIsPrintingStatementModalOpen(true)}
+                className="px-5 py-2.5 bg-primary hover:bg-primary-light text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer border-0"
+              >
+                <Printer size={15} className="text-amber-300" />
+                ব্যাংক স্টেটমেন্ট প্রিন্ট / PDF
+              </button>
+            </div>
+
+            {/* Date Range & Bank Filter Controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">শুরু তারিখ (From Date)</label>
+                <input
+                  type="date"
+                  value={stmtStartDate}
+                  onChange={(e) => setStmtStartDate(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">শেষ তারিখ (To Date)</label>
+                <input
+                  type="date"
+                  value={stmtEndDate}
+                  onChange={(e) => setStmtEndDate(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">ব্যাংক নির্বাচন</label>
+                <select
+                  value={stmtSelectedBank}
+                  onChange={(e) => setStmtSelectedBank(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
+                >
+                  <option value="ALL">সকল ব্যাংক অ্যাকাউন্ট (Consolidated)</option>
+                  {uniqueBankNames.map((bn, idx) => (
+                    <option key={idx} value={bn}>{bn}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col justify-end">
+                <span className="block text-xs font-bold text-slate-600 mb-1">কুইক মেয়ার ফিল্টার</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      const now = new Date();
+                      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                      const today = now.toISOString().split('T')[0];
+                      setStmtStartDate(firstDay);
+                      setStmtEndDate(today);
+                    }}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg border-0 cursor-pointer transition-all flex-1"
+                  >
+                    চলতি মাস
+                  </button>
+                  <button
+                    onClick={() => {
+                      const now = new Date();
+                      now.setMonth(now.getMonth() - 3);
+                      setStmtStartDate(now.toISOString().split('T')[0]);
+                      setStmtEndDate(new Date().toISOString().split('T')[0]);
+                    }}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg border-0 cursor-pointer transition-all flex-1"
+                  >
+                    গত ৩ মাস
+                  </button>
+                  <button
+                    onClick={() => {
+                      const now = new Date();
+                      setStmtStartDate(`${now.getFullYear()}-01-01`);
+                      setStmtEndDate(now.toISOString().split('T')[0]);
+                    }}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg border-0 cursor-pointer transition-all flex-1"
+                  >
+                    চলতি বছর
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Statement Period Metrics Banner */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+              <span className="text-[10px] text-slate-500 font-bold uppercase block">প্রারম্ভিক জের (Opening Balance)</span>
+              <span className="text-base md:text-lg font-bold text-slate-800 font-mono block mt-1">
+                {formatCurrencyBangla(statementOpeningBalance)}
+              </span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">{toBanglaDigits(stmtStartDate)}-এর পূর্বের জের</span>
+            </div>
+
+            <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200/80 shadow-xs">
+              <span className="text-[10px] text-emerald-800 font-bold uppercase block">মেয়াদে মোট জমা (Period Deposit)</span>
+              <span className="text-base md:text-lg font-bold text-emerald-900 font-mono block mt-1">
+                (+) {formatCurrencyBangla(statementPeriodTotalDeposits)}
+              </span>
+              <span className="text-[10px] text-emerald-700 block mt-0.5">{toBanglaDigits(periodDeposits.length)} টি জমা এন্ট্রি</span>
+            </div>
+
+            <div className="bg-rose-50/60 p-4 rounded-xl border border-rose-200/80 shadow-xs">
+              <span className="text-[10px] text-rose-800 font-bold uppercase block">মেয়াদে মোট উত্তোলন (Period Withdrawal)</span>
+              <span className="text-base md:text-lg font-bold text-rose-900 font-mono block mt-1">
+                (-) {formatCurrencyBangla(statementPeriodTotalWithdrawals)}
+              </span>
+              <span className="text-[10px] text-rose-700 block mt-0.5">{toBanglaDigits(periodWithdrawals.length)} টি উত্তোলন এন্ট্রি</span>
+            </div>
+
+            <div className="bg-primary text-white p-4 rounded-xl border border-primary-light shadow-sm">
+              <span className="text-[10px] text-amber-300 font-bold uppercase block">সমাপনী জের (Closing Net Balance)</span>
+              <span className="text-base md:text-lg font-bold text-amber-300 font-mono block mt-1">
+                {formatCurrencyBangla(statementClosingBalance)}
+              </span>
+              <span className="text-[10px] text-emerald-200 block mt-0.5">{toBanglaDigits(stmtEndDate)} তারিখে জের</span>
+            </div>
+          </div>
+
+          {/* Statement Ledger Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Landmark size={15} className="text-primary" />
+                লেনদেন খতিয়ান সূচি ({toBanglaDigits(stmtStartDate)} হতে {toBanglaDigits(stmtEndDate)})
+              </span>
+              <span className="text-xs font-bold text-primary bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                মোট রেকর্ড: {toBanglaDigits(statementLedger.length)} টি
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-100/80 text-slate-700 border-b border-slate-200 font-bold">
+                    <th className="p-3 text-center">#</th>
+                    <th className="p-3 text-center">তারিখ</th>
+                    <th className="p-3 text-center">ধরন</th>
+                    <th className="p-3">ব্যাংক ও শাখা</th>
+                    <th className="p-3 text-center">স্লিপ/চেক নং</th>
+                    <th className="p-3">বিবরণ / রেফারেন্স</th>
+                    <th className="p-3 text-right text-emerald-800">জমা (Deposit ৳)</th>
+                    <th className="p-3 text-right text-rose-800">উত্তোলন (Withdrawal ৳)</th>
+                    <th className="p-3 text-right text-primary font-bold">চলমান ব্যালেন্স (৳)</th>
+                    <th className="p-3 text-center">প্রমাণপত্র</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {/* Opening Balance Row */}
+                  <tr className="bg-amber-50/40 font-bold text-slate-800">
+                    <td className="p-3 text-center text-slate-400">—</td>
+                    <td className="p-3 text-center font-mono">{toBanglaDigits(stmtStartDate)}</td>
+                    <td className="p-3 text-center">
+                      <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[10px]">
+                        প্রারম্ভিক জের
+                      </span>
+                    </td>
+                    <td className="p-3 text-slate-600">{stmtSelectedBank === 'ALL' ? 'সকল ব্যাংক' : stmtSelectedBank}</td>
+                    <td className="p-3 text-center font-mono text-slate-400">—</td>
+                    <td className="p-3 italic text-slate-600">{stmtStartDate} তারিখের পূর্বের জের</td>
+                    <td className="p-3 text-right font-mono text-slate-400">—</td>
+                    <td className="p-3 text-right font-mono text-slate-400">—</td>
+                    <td className="p-3 text-right font-mono font-extrabold text-primary">{formatCurrencyBangla(statementOpeningBalance)}</td>
+                    <td className="p-3 text-center text-slate-400">—</td>
+                  </tr>
+
+                  {/* Transaction Ledger Rows */}
+                  {statementLedger.length > 0 ? (
+                    statementLedger.map((item, index) => (
+                      <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3 text-center font-mono text-slate-500">{toBanglaDigits(index + 1)}</td>
+                        <td className="p-3 text-center font-mono font-semibold">{toBanglaDigits(item.date)}</td>
+                        <td className="p-3 text-center">
+                          {item.type === 'DEPOSIT' ? (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center gap-0.5">
+                              <ArrowUpRight size={10} /> জমা
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px] inline-flex items-center gap-0.5">
+                              <ArrowDownLeft size={10} /> উত্তোলন
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 font-semibold text-slate-800">
+                          {item.bankName} <span className="text-slate-400 text-[10px]">({item.branch})</span>
+                        </td>
+                        <td className="p-3 text-center font-mono font-bold text-slate-700">
+                          {toBanglaDigits(item.refNumber)}
+                        </td>
+                        <td className="p-3 text-slate-700 font-medium">
+                          {item.particulars}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-emerald-700">
+                          {item.depositAmount > 0 ? formatCurrencyBangla(item.depositAmount) : '—'}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-rose-700">
+                          {item.withdrawalAmount > 0 ? formatCurrencyBangla(item.withdrawalAmount) : '—'}
+                        </td>
+                        <td className="p-3 text-right font-mono font-extrabold text-primary">
+                          {formatCurrencyBangla(item.runningBalance)}
+                        </td>
+                        <td className="p-3 text-center">
+                          {item.photo ? (
+                            <button
+                              type="button"
+                              onClick={() => setViewingPhoto({ title: `${item.type === 'DEPOSIT' ? 'ব্যাংক জমা' : 'ব্যাংক উত্তোলন'} প্রমানপত্র`, url: item.photo })}
+                              className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border-0 cursor-pointer"
+                              title="ছবি দেখুন"
+                            >
+                              <Camera size={13} />
+                            </button>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={10} className="p-8 text-center text-slate-400">
+                        উক্ত মেয়াদে কোনো ব্যাংক জমা বা উত্তোলন পাওয়া যায়নি।
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Closing Balance Footer Row */}
+                  <tr className="bg-primary/5 font-extrabold text-primary border-t-2 border-slate-300">
+                    <td colSpan={6} className="p-3.5 text-right font-bold text-slate-800">
+                      মেয়াদে মোট জমা, মোট উত্তোলন ও সমাপনী জের:
+                    </td>
+                    <td className="p-3.5 text-right font-mono font-extrabold text-emerald-800">
+                      {formatCurrencyBangla(statementPeriodTotalDeposits)}
+                    </td>
+                    <td className="p-3.5 text-right font-mono font-extrabold text-rose-800">
+                      {formatCurrencyBangla(statementPeriodTotalWithdrawals)}
+                    </td>
+                    <td className="p-3.5 text-right font-mono text-base font-extrabold text-primary bg-amber-100/50">
+                      {formatCurrencyBangla(statementClosingBalance)}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SUB-TAB 5: FUND & FDR SUMMARY --- */}
       {activeSubTab === 'summary' && (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-6">
           <div className="border-b border-slate-100 pb-4">
@@ -1274,7 +1646,7 @@ export default function BankDepositSheet({
 
       {/* Photo View Zoom Modal */}
       {viewingPhoto && (
-        <div className="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setViewingPhoto(null)}>
+        <div className="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in no-print" onClick={() => setViewingPhoto(null)}>
           <div className="bg-white rounded-2xl max-w-xl w-full p-4 space-y-3 relative shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-xs font-bold text-primary flex items-center gap-1.5">
@@ -1292,6 +1664,362 @@ export default function BankDepositSheet({
               <button onClick={() => setViewingPhoto(null)} className="px-5 py-2 bg-primary hover:bg-primary-light text-white font-bold text-xs rounded-xl cursor-pointer border-0 shadow-sm">
                 বন্ধ করুন
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Printable Bank Deposit Slip Voucher Modal */}
+      {printingDeposit && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto" onClick={() => setPrintingDeposit(null)}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 space-y-4 relative shadow-2xl my-auto animate-scale-in" onClick={e => e.stopPropagation()}>
+            {/* Top Bar Action (Hidden on Print) */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 no-print">
+              <span className="text-xs sm:text-sm font-bold text-primary flex items-center gap-2">
+                <Printer size={16} className="text-gold" />
+                ব্যাংক ডিপোজিট মেমো ও চালান প্রিন্ট প্রিভিউ
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-primary hover:bg-primary-light text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer border-0"
+                >
+                  <Printer size={14} /> প্রিন্ট করুন / PDF
+                </button>
+                <button
+                  onClick={() => setPrintingDeposit(null)}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl cursor-pointer border-0 transition-all"
+                  title="বন্ধ করুন"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Area - Official Deposit Voucher */}
+            <div id="printable-deposit-slip" className="p-5 sm:p-6 border-2 border-emerald-900/30 rounded-2xl bg-white text-slate-900 space-y-4 shadow-sm">
+              {/* Organization Header */}
+              <div className="text-center border-b-2 border-emerald-900/20 pb-3">
+                <div className="flex items-center justify-center gap-3 mb-1.5">
+                  {settings?.logo ? (
+                    <img src={settings.logo} alt="Logo" className="w-12 h-12 object-contain" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg">
+                      আ
+                    </div>
+                  )}
+                  <div>
+                    <h1 className="text-lg sm:text-xl font-extrabold text-primary uppercase tracking-wide">
+                      {settings?.orgName || 'আল-বারাকা ভূমি প্রকল্প'}
+                    </h1>
+                    <p className="text-xs text-slate-600 font-medium">{settings?.orgSlogan || 'আপনার বিশ্বস্ত সঞ্চয় ও বিনিয়োগ সহযোগী'}</p>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  {settings?.orgAddress || 'ময়মনসিংহ, বাংলাদেশ'} | মোবাইল: {toBanglaDigits(settings?.orgMobile || '01700000000')}
+                </p>
+                <div className="mt-2.5 inline-block px-4 py-1 bg-primary text-amber-300 font-extrabold text-xs rounded-full shadow-xs tracking-wide">
+                  ব্যাংক ডিপোজিট চালান (BANK DEPOSIT VOUCHER)
+                </div>
+              </div>
+
+              {/* Info Table Details */}
+              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-slate-500 font-semibold block text-[10px]">ডিপোজিট চালান আইডি:</span>
+                  <span className="font-mono font-bold text-primary text-sm">{printingDeposit.id}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-500 font-semibold block text-[10px]">জমার তারিখ:</span>
+                  <span className="font-mono font-bold text-slate-900 text-sm">{toBanglaDigits(printingDeposit.date)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-semibold block text-[10px]">ব্যাংকের নাম:</span>
+                  <span className="font-bold text-slate-900">{printingDeposit.bankName}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-500 font-semibold block text-[10px]">শাখার নাম:</span>
+                  <span className="font-bold text-slate-900">{printingDeposit.branch}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-semibold block text-[10px]">ব্যাংক জমা স্লিপ নম্বর:</span>
+                  <span className="font-mono font-bold text-emerald-800 text-sm">{toBanglaDigits(printingDeposit.slipNumber)}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-500 font-semibold block text-[10px]">রেফারেন্স / বিবরণ:</span>
+                  <span className="font-semibold text-slate-800">{printingDeposit.reference || 'মাসিক সঞ্চয় তহবিল জমা'}</span>
+                </div>
+              </div>
+
+              {/* Amount Box */}
+              <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs text-emerald-800 font-bold block">জমার পরিমাণ (কথায়):</span>
+                  <span className="text-sm font-extrabold text-emerald-950 mt-0.5 block">{toBanglaWords(printingDeposit.amount)}</span>
+                </div>
+                <div className="bg-primary text-amber-300 px-5 py-2.5 rounded-xl text-right font-mono font-extrabold text-lg shadow-sm border border-emerald-950">
+                  {formatCurrencyBangla(printingDeposit.amount)}
+                </div>
+              </div>
+
+              {printingDeposit.remarks && (
+                <div className="text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                  <span className="font-bold text-slate-600">অতিরিক্ত মন্তব্য: </span>
+                  <span className="text-slate-800">{printingDeposit.remarks}</span>
+                </div>
+              )}
+
+              {/* Attached Bank Slip Image (If Uploaded) */}
+              {printingDeposit.slipPhoto && (
+                <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-700 block">সংযুক্ত ব্যাংক স্লিপের মূল কপি (Bank Slip Copy):</span>
+                  <div className="max-h-48 overflow-hidden rounded-lg border border-slate-200 bg-white flex items-center justify-center p-1">
+                    <img src={printingDeposit.slipPhoto} alt="Bank Deposit Slip" className="max-h-44 object-contain rounded-md" referrerPolicy="no-referrer" />
+                  </div>
+                </div>
+              )}
+
+              {/* Official Signatures */}
+              <div className="pt-8 grid grid-cols-3 gap-3 text-center text-[11px] border-t border-slate-200 mt-6">
+                <div>
+                  <div className="border-b border-slate-400 mb-1 h-8 flex items-end justify-center pb-0.5">
+                    {settings?.collectorSignature ? (
+                      <img src={settings.collectorSignature} alt="Depositor Sig" className="h-6 object-contain" referrerPolicy="no-referrer" />
+                    ) : null}
+                  </div>
+                  <span className="font-bold text-slate-800 block">জমা প্রদানকারী / ক্যাশিয়ার</span>
+                  <span className="text-[10px] text-slate-500">{settings?.collectorName || 'হিসাব রক্ষক'}</span>
+                </div>
+                <div>
+                  <div className="border-b border-slate-400 mb-1 h-8 flex items-end justify-center pb-0.5">
+                    {settings?.treasurerSignature ? (
+                      <img src={settings.treasurerSignature} alt="Treasurer Sig" className="h-6 object-contain" referrerPolicy="no-referrer" />
+                    ) : null}
+                  </div>
+                  <span className="font-bold text-slate-800 block">কোষাধ্যক্ষ</span>
+                  <span className="text-[10px] text-slate-500">{settings?.treasurerName || 'অর্থ সম্পাদক'}</span>
+                </div>
+                <div>
+                  <div className="border-b border-slate-400 mb-1 h-8 flex items-end justify-center pb-0.5">
+                    {settings?.signature ? (
+                      <img src={settings.signature} alt="President Sig" className="h-6 object-contain" referrerPolicy="no-referrer" />
+                    ) : null}
+                  </div>
+                  <span className="font-bold text-slate-800 block">সভাপতি / প্রতিষ্ঠাতা</span>
+                  <span className="text-[10px] text-slate-500">{settings?.founderName || 'সভাপতি'}</span>
+                </div>
+              </div>
+
+              {/* Bottom Footer Note */}
+              <div className="text-[9px] text-slate-400 text-center border-t border-slate-100 pt-2 font-mono">
+                এটি আল-বারাকা ভূমি প্রকল্পের একটি ডিজিটাল ব্যাংক ডিপোজিট চালান কপি | সংরক্ষণ তারিখ: {toBanglaDigits(new Date().toISOString().split('T')[0])}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Printable Bank Account Statement Modal */}
+      {isPrintingStatementModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto" onClick={() => setIsPrintingStatementModalOpen(false)}>
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-4 sm:p-6 space-y-4 relative shadow-2xl my-auto animate-scale-in" onClick={e => e.stopPropagation()}>
+            {/* Top Bar Action (Hidden on Print) */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 no-print">
+              <span className="text-xs sm:text-sm font-bold text-primary flex items-center gap-2">
+                <Printer size={16} className="text-gold" />
+                ব্যাংক অ্যাকাউন্ট স্টেটমেন্ট প্রিন্ট প্রিভিউ (Print Statement Preview)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-primary hover:bg-primary-light text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer border-0"
+                >
+                  <Printer size={14} /> প্রিন্ট করুন / PDF ডাউনলোড
+                </button>
+                <button
+                  onClick={() => setIsPrintingStatementModalOpen(false)}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl cursor-pointer border-0 transition-all"
+                  title="বন্ধ করুন"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Area - Official Bank Statement Document */}
+            <div id="printable-bank-statement" className="p-5 sm:p-8 border-2 border-slate-800 rounded-2xl bg-white text-slate-900 space-y-5 shadow-xs">
+              {/* Organization Header */}
+              <div className="text-center border-b-2 border-primary/20 pb-4">
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  {settings?.logo ? (
+                    <img src={settings.logo} alt="Logo" className="w-14 h-14 object-contain" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xl">
+                      আ
+                    </div>
+                  )}
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-extrabold text-primary uppercase tracking-wide">
+                      {settings?.orgName || 'আল-বারাকা ভূমি প্রকল্প'}
+                    </h1>
+                    <p className="text-xs text-slate-600 font-semibold">{settings?.orgSlogan || 'আপনার বিশ্বস্ত সঞ্চয় ও বিনিয়োগ সহযোগী'}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 font-medium">
+                  {settings?.orgAddress || 'ময়মনসিংহ, বাংলাদেশ'} | মোবাইল: {toBanglaDigits(settings?.orgMobile || '01700000000')}
+                </p>
+                <div className="mt-3 inline-block px-5 py-1.5 bg-primary text-amber-300 font-extrabold text-xs rounded-full tracking-wider uppercase border border-primary-light shadow-xs">
+                  অফিসিয়াল ব্যাংক অ্যাকাউন্ট লেনদেন স্টেটমেন্ট (OFFICIAL BANK STATEMENT)
+                </div>
+              </div>
+
+              {/* Statement Info Header Box */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-slate-500 font-bold block text-[10px]">প্রতিষ্ঠানের নাম (Account Holder):</span>
+                  <span className="font-bold text-primary">{settings?.orgName || 'আল-বারাকা ভূমি প্রকল্প'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block text-[10px]">ব্যাংকের নাম (Bank Account):</span>
+                  <span className="font-bold text-slate-900">{stmtSelectedBank === 'ALL' ? 'সকল ব্যাংক অ্যাকাউন্ট (Consolidated)' : stmtSelectedBank}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block text-[10px]">স্টেটমেন্ট মেয়াদ (Period):</span>
+                  <span className="font-mono font-bold text-slate-900">{toBanglaDigits(stmtStartDate)} হতে {toBanglaDigits(stmtEndDate)}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-500 font-bold block text-[10px]">প্রিন্টের তারিখ (Printed On):</span>
+                  <span className="font-mono font-bold text-slate-900">{toBanglaDigits(new Date().toISOString().split('T')[0])}</span>
+                </div>
+              </div>
+
+              {/* Stat Summary Box */}
+              <div className="grid grid-cols-4 gap-2 bg-emerald-50/80 p-3.5 rounded-xl border border-emerald-200 text-center text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-600 font-bold block">প্রারম্ভিক জের:</span>
+                  <span className="font-mono font-bold text-slate-900 text-sm block mt-0.5">{formatCurrencyBangla(statementOpeningBalance)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-emerald-800 font-bold block">মেয়াদে মোট জমা (+):</span>
+                  <span className="font-mono font-bold text-emerald-800 text-sm block mt-0.5">{formatCurrencyBangla(statementPeriodTotalDeposits)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-rose-800 font-bold block">মেয়াদে মোট উত্তোলন (-):</span>
+                  <span className="font-mono font-bold text-rose-800 text-sm block mt-0.5">{formatCurrencyBangla(statementPeriodTotalWithdrawals)}</span>
+                </div>
+                <div className="bg-primary text-amber-300 rounded-lg p-1.5 shadow-xs">
+                  <span className="text-[10px] font-bold block">সমাপনী জের (=):</span>
+                  <span className="font-mono font-extrabold text-sm block mt-0.5">{formatCurrencyBangla(statementClosingBalance)}</span>
+                </div>
+              </div>
+
+              {/* Statement Table */}
+              <div className="border border-slate-300 rounded-xl overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-200 text-slate-900 border-b border-slate-300 font-extrabold">
+                      <th className="p-2 text-center border-r border-slate-300">#</th>
+                      <th className="p-2 text-center border-r border-slate-300">তারিখ</th>
+                      <th className="p-2 text-center border-r border-slate-300">ধরন</th>
+                      <th className="p-2 border-r border-slate-300">ব্যাংক ও শাখা</th>
+                      <th className="p-2 text-center border-r border-slate-300">স্লিপ/চেক নং</th>
+                      <th className="p-2 border-r border-slate-300">বিবরণ / রেফারেন্স</th>
+                      <th className="p-2 text-right border-r border-slate-300">জমা (৳)</th>
+                      <th className="p-2 text-right border-r border-slate-300">উত্তোলন (৳)</th>
+                      <th className="p-2 text-right">চলমান ব্যালেন্স (৳)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {/* Opening Balance */}
+                    <tr className="bg-slate-50 font-bold">
+                      <td className="p-2 text-center text-slate-400 border-r border-slate-200">—</td>
+                      <td className="p-2 text-center font-mono border-r border-slate-200">{toBanglaDigits(stmtStartDate)}</td>
+                      <td className="p-2 text-center border-r border-slate-200">প্রারম্ভিক জের</td>
+                      <td className="p-2 border-r border-slate-200 text-slate-600">{stmtSelectedBank === 'ALL' ? 'সকল ব্যাংক' : stmtSelectedBank}</td>
+                      <td className="p-2 text-center text-slate-400 border-r border-slate-200">—</td>
+                      <td className="p-2 italic border-r border-slate-200 text-slate-600">তারিখের পূর্বের হিসাব জের</td>
+                      <td className="p-2 text-right text-slate-400 border-r border-slate-200">—</td>
+                      <td className="p-2 text-right text-slate-400 border-r border-slate-200">—</td>
+                      <td className="p-2 text-right font-mono font-bold text-primary">{formatCurrencyBangla(statementOpeningBalance)}</td>
+                    </tr>
+
+                    {statementLedger.map((item, idx) => (
+                      <tr key={item.id} className="border-b border-slate-200">
+                        <td className="p-2 text-center font-mono border-r border-slate-200 text-slate-500">{toBanglaDigits(idx + 1)}</td>
+                        <td className="p-2 text-center font-mono border-r border-slate-200 font-semibold">{toBanglaDigits(item.date)}</td>
+                        <td className="p-2 text-center border-r border-slate-200 font-bold">
+                          {item.type === 'DEPOSIT' ? 'জমা' : 'উত্তোলন'}
+                        </td>
+                        <td className="p-2 border-r border-slate-200">
+                          {item.bankName} <span className="text-[10px] text-slate-500">({item.branch})</span>
+                        </td>
+                        <td className="p-2 text-center font-mono font-bold border-r border-slate-200">{toBanglaDigits(item.refNumber)}</td>
+                        <td className="p-2 border-r border-slate-200">{item.particulars}</td>
+                        <td className="p-2 text-right font-mono font-bold text-emerald-800 border-r border-slate-200">
+                          {item.depositAmount > 0 ? formatCurrencyBangla(item.depositAmount) : '—'}
+                        </td>
+                        <td className="p-2 text-right font-mono font-bold text-rose-800 border-r border-slate-200">
+                          {item.withdrawalAmount > 0 ? formatCurrencyBangla(item.withdrawalAmount) : '—'}
+                        </td>
+                        <td className="p-2 text-right font-mono font-extrabold text-primary">
+                          {formatCurrencyBangla(item.runningBalance)}
+                        </td>
+                      </tr>
+                    ))}
+
+                    <tr className="bg-slate-100 font-extrabold text-slate-900 border-t-2 border-slate-400">
+                      <td colSpan={6} className="p-2.5 text-right">মেয়াদে মোট জমা, উত্তোলন ও সমাপনী ব্যালেন্স:</td>
+                      <td className="p-2.5 text-right font-mono text-emerald-900 border-r border-slate-300">{formatCurrencyBangla(statementPeriodTotalDeposits)}</td>
+                      <td className="p-2.5 text-right font-mono text-rose-900 border-r border-slate-300">{formatCurrencyBangla(statementPeriodTotalWithdrawals)}</td>
+                      <td className="p-2.5 text-right font-mono text-primary text-sm bg-amber-100">{formatCurrencyBangla(statementClosingBalance)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Amount in words */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-slate-700 block">সমাপনী জের কথায় (Amount in Words):</span>
+                  <span className="font-extrabold text-primary text-sm mt-0.5 block">{toBanglaWords(Math.abs(statementClosingBalance))}</span>
+                </div>
+              </div>
+
+              {/* Signatures */}
+              <div className="pt-10 grid grid-cols-3 gap-4 text-center text-[11px] border-t border-slate-300 mt-6">
+                <div>
+                  <div className="border-b border-slate-400 mb-1 h-8 flex items-end justify-center pb-0.5">
+                    {settings?.collectorSignature ? (
+                      <img src={settings.collectorSignature} alt="Collector Sig" className="h-6 object-contain" referrerPolicy="no-referrer" />
+                    ) : null}
+                  </div>
+                  <span className="font-bold text-slate-800 block">প্রস্তুতকারী / হিসাব রক্ষক</span>
+                  <span className="text-[10px] text-slate-500">{settings?.collectorName || 'ক্যাশিয়ার'}</span>
+                </div>
+                <div>
+                  <div className="border-b border-slate-400 mb-1 h-8 flex items-end justify-center pb-0.5">
+                    {settings?.treasurerSignature ? (
+                      <img src={settings.treasurerSignature} alt="Treasurer Sig" className="h-6 object-contain" referrerPolicy="no-referrer" />
+                    ) : null}
+                  </div>
+                  <span className="font-bold text-slate-800 block">অর্থ সম্পাদক / কোষাধ্যক্ষ</span>
+                  <span className="text-[10px] text-slate-500">{settings?.treasurerName || 'কোষাধ্যক্ষ'}</span>
+                </div>
+                <div>
+                  <div className="border-b border-slate-400 mb-1 h-8 flex items-end justify-center pb-0.5">
+                    {settings?.signature ? (
+                      <img src={settings.signature} alt="President Sig" className="h-6 object-contain" referrerPolicy="no-referrer" />
+                    ) : null}
+                  </div>
+                  <span className="font-bold text-slate-800 block">সভাপতি / অনুমোদনকারী</span>
+                  <span className="text-[10px] text-slate-500">{settings?.founderName || 'সভাপতি'}</span>
+                </div>
+              </div>
+
+              {/* Footer Note */}
+              <div className="text-[9px] text-slate-400 text-center border-t border-slate-100 pt-2 font-mono">
+                এটি কম্পিউটার জেনারেটেড অফিসিয়াল ব্যাংক লেনদেন স্টেটমেন্ট কপি | আল-বারাকা ভূমি প্রকল্প
+              </div>
             </div>
           </div>
         </div>
