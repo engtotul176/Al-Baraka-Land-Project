@@ -476,7 +476,7 @@ export default function BankDepositSheet({
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${(printingDeposit || printingWithdrawal || printingExpense || isPrintingStatementModalOpen) ? 'no-print' : ''}`}>
       {/* Title Panel */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
         <div>

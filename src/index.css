@@ -22,38 +22,70 @@ body {
 
 /* Printable styles for the Receipts, Reports & Member Directory */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
   body {
     background-color: white !important;
     color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
+
   .no-print {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
   }
+
   .print-shadow-none {
     box-shadow: none !important;
     border: none !important;
   }
-  
+
   /* Printable modal / directory layout optimization */
   .fixed {
     position: relative !important;
     background: transparent !important;
     padding: 0 !important;
+    margin: 0 !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
   }
+
   .print-container {
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
   }
+
   table {
     page-break-inside: auto;
+    width: 100% !important;
   }
+
   tr {
     page-break-inside: avoid;
     page-break-after: auto;
+  }
+
+  /* Remove dark backdrop overlays and blurs when printing */
+  .bg-slate-950\/80, 
+  .bg-slate-900\/80, 
+  .bg-slate-950\/75, 
+  .bg-slate-900\/60, 
+  .backdrop-blur-sm, 
+  .backdrop-blur-xs {
+    background-color: transparent !important;
+    backdrop-filter: none !important;
   }
 }
 

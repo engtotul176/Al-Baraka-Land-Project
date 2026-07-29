@@ -46,7 +46,7 @@ export default function PopUpNoticeModal({
   if (!isOpen || !notice) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fadeIn no-print">
       <div 
         className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border-2 border-amber-500/40 overflow-hidden transform transition-all animate-scaleUp"
         onClick={(e) => e.stopPropagation()}
