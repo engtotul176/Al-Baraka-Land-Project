@@ -77,7 +77,7 @@ export default function MemberLedgerSheet({
     .reduce((sum, p) => sum + p.amount, 0);
 
   // Calculation of dues
-  // Baseline: expected monthly deposit for elapsed active months starting strictly from July 2026
+  // Baseline: expected monthly deposit for elapsed active months starting strictly from August 2026
   const elapsedMonths = getElapsedMonthsFromJuly2026();
   const expectedMonthlyDeposit = elapsedMonths * settings.monthlyAmount;
   const monthlyDepositDue = Math.max(0, expectedMonthlyDeposit - monthlyDepositTotal);

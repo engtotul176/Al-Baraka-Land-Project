@@ -10,7 +10,7 @@ import {
   onSnapshot,
   Firestore 
 } from 'firebase/firestore';
-import { Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry, SystemSettings } from './types';
+import { Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry, SystemSettings, UserSession } from './types';
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
@@ -433,6 +433,7 @@ export function subscribeToFirestoreChanges(
     bankWithdrawals?: BankWithdrawal[];
     expenseEntries?: ExpenseEntry[];
     settings?: SystemSettings;
+    liveSessions?: UserSession[];
   }) => void
 ): () => void {
   if (!isFirebaseConfigured(settings)) return () => {};
@@ -486,6 +487,12 @@ export function subscribeToFirestoreChanges(
       });
     }, (err) => console.error("Realtime settings listener error:", err));
 
+    const unsubLiveSessions = onSnapshot(collection(db, 'liveSessions'), (snapshot) => {
+      const liveSessions: UserSession[] = [];
+      snapshot.forEach((docSnap) => liveSessions.push(docSnap.data() as UserSession));
+      onDataReceived({ liveSessions });
+    }, (err) => console.error("Realtime liveSessions listener error:", err));
+
     return () => {
       unsubMembers();
       unsubPayments();
@@ -493,6 +500,7 @@ export function subscribeToFirestoreChanges(
       unsubWithdrawals();
       unsubExpenses();
       unsubSettings();
+      unsubLiveSessions();
     };
   } catch (err) {
     console.error("Failed to subscribe to Firestore real-time changes:", err);
@@ -502,7 +510,7 @@ export function subscribeToFirestoreChanges(
 
 export async function syncSingleItem(
   settings: SystemSettings,
-  collectionName: 'members' | 'payments' | 'bankDeposits' | 'bankWithdrawals' | 'expenseEntries' | 'settings',
+  collectionName: 'members' | 'payments' | 'bankDeposits' | 'bankWithdrawals' | 'expenseEntries' | 'settings' | 'liveSessions',
   docId: string,
   data: any
 ): Promise<void> {

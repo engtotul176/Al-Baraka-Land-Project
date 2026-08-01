@@ -4,7 +4,25 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry, SystemSettings } from './types';
+import { Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry, SystemSettings, UserSession } from './types';
+
+// Helper to get device/browser info
+function getDeviceInfo(): string {
+  if (typeof navigator === 'undefined') return 'Desktop';
+  const ua = navigator.userAgent;
+  let os = 'Desktop';
+  if (/android/i.test(ua)) os = 'Android Mobile';
+  else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS Mobile';
+  else if (/windows/i.test(ua)) os = 'Windows PC';
+  else if (/mac/i.test(ua)) os = 'Mac OS';
+  
+  let browser = 'Browser';
+  if (/chrome|crios/i.test(ua)) browser = 'Chrome';
+  else if (/firefox/i.test(ua)) browser = 'Firefox';
+  else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browser = 'Safari';
+  
+  return `${os} (${browser})`;
+}
 import { 
   getInitialMembers, 
   getInitialPayments, 
@@ -61,6 +79,7 @@ export default function App() {
   const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
   const [isAdmin, setIsAdmin] = useState<boolean>(true);
+  const [liveSessions, setLiveSessions] = useState<UserSession[]>([]);
 
   // Secure Session States
   const [loggedInUser, setLoggedInUser] = useState<{ role: 'admin' | 'member'; memberId?: string; name?: string } | null>(null);
@@ -185,6 +204,7 @@ export default function App() {
       if (data.bankDeposits) saveDeposits(data.bankDeposits);
       if (data.bankWithdrawals) saveWithdrawals(data.bankWithdrawals);
       if (data.expenseEntries) saveExpenses(data.expenseEntries);
+      if (data.liveSessions) setLiveSessions(data.liveSessions);
       if (data.settings) {
         saveSettings({
           ...data.settings,
@@ -208,6 +228,88 @@ export default function App() {
     settings.firebaseProjectId, 
     settings.firebaseAppId
   ]);
+
+  // Live User Tracker Heartbeat & Session Management
+  useEffect(() => {
+    let sessionId = sessionStorage.getItem('ab_app_session_id');
+    if (!sessionId) {
+      sessionId = 'sess_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+      sessionStorage.setItem('ab_app_session_id', sessionId);
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    let firstSeen = sessionStorage.getItem('ab_session_first_seen');
+    if (!firstSeen) {
+      firstSeen = todayStr;
+      sessionStorage.setItem('ab_session_first_seen', firstSeen);
+    }
+
+    let loginTime = sessionStorage.getItem('ab_session_login_time');
+    if (!loginTime) {
+      loginTime = new Date().toISOString();
+      sessionStorage.setItem('ab_session_login_time', loginTime);
+    }
+
+    const sendHeartbeat = () => {
+      const nowIso = new Date().toISOString();
+      const mySession: UserSession = {
+        sessionId: sessionId!,
+        memberId: loggedInUser?.memberId || (isAdmin ? 'ADMIN' : undefined),
+        memberName: loggedInUser?.name || (isAdmin ? 'প্রধান প্রশাসক (Admin)' : 'অতিথি ব্যবহারকারী'),
+        role: loggedInUser?.role || (isAdmin ? 'admin' : 'guest'),
+        deviceInfo: getDeviceInfo(),
+        loginTime: loginTime!,
+        lastActive: nowIso,
+        firstSeenToday: firstSeen!,
+      };
+
+      // 1. Update local storage sessions
+      let storedSessions: UserSession[] = [];
+      try {
+        const raw = localStorage.getItem('ab_live_user_sessions');
+        if (raw) storedSessions = JSON.parse(raw);
+      } catch (e) {}
+
+      const idx = storedSessions.findIndex(s => s.sessionId === mySession.sessionId);
+      if (idx >= 0) {
+        storedSessions[idx] = mySession;
+      } else {
+        storedSessions.push(mySession);
+      }
+
+      // Filter out sessions older than 7 days
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      storedSessions = storedSessions.filter(s => new Date(s.lastActive).getTime() > sevenDaysAgo);
+
+      try {
+        localStorage.setItem('ab_live_user_sessions', JSON.stringify(storedSessions));
+      } catch (e) {}
+
+      setLiveSessions(storedSessions);
+
+      // 2. Sync to Firebase if configured
+      if (settings.firebaseSyncEnabled && isFirebaseConfigured(settings)) {
+        syncSingleItem(settings, 'liveSessions', mySession.sessionId, mySession).catch(() => {});
+      }
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 15000);
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'ab_live_user_sessions' && e.newValue) {
+        try {
+          setLiveSessions(JSON.parse(e.newValue));
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [loggedInUser, isAdmin, settings.firebaseSyncEnabled, settings.firebaseApiKey]);
 
   // 1. Initialize data on Mount
   useEffect(() => {
@@ -1093,6 +1195,8 @@ export default function App() {
               bankDeposits={bankDeposits}
               bankWithdrawals={bankWithdrawals}
               expenses={expenses}
+              liveSessions={liveSessions}
+              isAdmin={isAdmin}
               onSelectTab={setActiveTab}
               onSelectReceipt={setSelectedReceiptNo}
             />

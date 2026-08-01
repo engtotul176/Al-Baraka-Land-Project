@@ -118,3 +118,14 @@ export interface SystemSettings {
   firebaseSyncEnabled?: boolean;
   adminPin?: string;
 }
+
+export interface UserSession {
+  sessionId: string;
+  memberId?: string;
+  memberName?: string;
+  role: 'admin' | 'member' | 'guest';
+  deviceInfo: string;
+  loginTime: string; // ISO string
+  lastActive: string; // ISO string
+  firstSeenToday: string; // YYYY-MM-DD
+}

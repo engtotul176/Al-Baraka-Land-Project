@@ -25,14 +25,14 @@ export function getTodayBanglaDate(): string {
   return `${toBanglaDigits(day)} ${month}, ${toBanglaDigits(year)}`;
 }
 
-// Calculate elapsed active months for monthly deposit calculation starting strictly from July 2026
-export function getElapsedMonthsFromJuly2026(targetDate: Date = new Date()): number {
+// Calculate elapsed active months for monthly deposit calculation starting strictly from August 2026
+export function getElapsedMonthsFromAugust2026(targetDate: Date = new Date()): number {
   const startYear = 2026;
-  const startMonth = 6; // July is 0-indexed month 6
+  const startMonth = 7; // August is 0-indexed month 7 (August 2026)
   const currentYear = targetDate.getFullYear();
   const currentMonth = targetDate.getMonth();
   
-  // If target date is before July 2026, baseline is 1 month (July 2026)
+  // If target date is before August 2026, baseline is 1 month (August 2026)
   if (currentYear < startYear || (currentYear === startYear && currentMonth < startMonth)) {
     return 1;
   }
@@ -40,6 +40,9 @@ export function getElapsedMonthsFromJuly2026(targetDate: Date = new Date()): num
   const months = (currentYear - startYear) * 12 + (currentMonth - startMonth) + 1;
   return Math.max(1, months);
 }
+
+// Backward compatibility alias
+export const getElapsedMonthsFromJuly2026 = getElapsedMonthsFromAugust2026;
 
 // Convert English numbers into English digits or formatted currency (Bangla-themed)
 export function formatCurrencyBangla(amount: number): string {
