@@ -8,6 +8,7 @@ import { Member, Payment, SystemSettings } from '../types';
 import { toBanglaDigits, formatCurrencyBangla } from '../utils';
 import { FileChartLine, Calendar, Award, AlertTriangle, Printer, ArrowRight, Eye, Edit2, Trash2 } from 'lucide-react';
 import EditPaymentModal from './EditPaymentModal';
+import { printElement } from '../utils/printHelper';
 
 interface ReportsSheetProps {
   members: Member[];
@@ -62,7 +63,7 @@ export default function ReportsSheet({
 
   // PRINT CURRENT ACTIVE REPORT
   const handlePrint = () => {
-    window.print();
+    printElement('printable-report-sheet');
   };
 
   // --- 1. MONTHLY REPORT CALCULATIONS ---
@@ -180,7 +181,7 @@ export default function ReportsSheet({
           </div>
 
           {/* Printable Report Sheet */}
-          <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6 print-shadow-none">
+          <div id="printable-report-sheet" className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6 print-shadow-none print-container">
             {/* Header in Print */}
             <div className="text-center pb-4 border-b-2 border-gold">
               <h2 className="text-xl sm:text-2xl font-bold text-primary">{settings.orgName}</h2>
@@ -345,7 +346,7 @@ export default function ReportsSheet({
           </div>
 
           {/* Printable Report */}
-          <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6 print-shadow-none">
+          <div id="printable-report-sheet" className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6 print-shadow-none print-container">
             <div className="text-center pb-4 border-b-2 border-gold">
               <h2 className="text-xl sm:text-2xl font-bold text-primary">{settings.orgName}</h2>
               <p className="text-xs text-gold font-semibold">{settings.orgSlogan}</p>
@@ -449,7 +450,7 @@ export default function ReportsSheet({
           </div>
 
           {/* Printable Report */}
-          <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6 print-shadow-none">
+          <div id="printable-report-sheet" className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6 print-shadow-none print-container">
             <div className="text-center pb-4 border-b-2 border-gold">
               <h2 className="text-xl sm:text-2xl font-bold text-primary">{settings.orgName}</h2>
               <p className="text-xs text-gold font-semibold">{settings.orgSlogan}</p>

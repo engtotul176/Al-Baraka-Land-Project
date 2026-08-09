@@ -24,68 +24,82 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm;
+    margin: 10mm;
   }
 
-  body {
+  body, html {
     background-color: white !important;
     color: black !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  .no-print {
+  /* Hide non-printable UI elements */
+  .no-print,
+  button:not(.print-allow),
+  nav,
+  header,
+  footer,
+  aside,
+  input,
+  select,
+  .ticker-banner {
     display: none !important;
   }
 
-  .print-only {
+  /* Ensure print containers and children are fully visible */
+  .print-container,
+  #printable-bank-statement,
+  #printable-deposit-slip,
+  #printable-report-sheet,
+  #printable-receipt,
+  #printable-ledger,
+  #printable-directory {
     display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-container *,
+  #printable-bank-statement *,
+  #printable-deposit-slip *,
+  #printable-report-sheet *,
+  #printable-receipt *,
+  #printable-ledger *,
+  #printable-directory * {
+    visibility: visible !important;
+  }
+
+  /* Fix table elements inside print containers */
+  table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  thead {
+    display: table-header-group !important;
+  }
+  tbody {
+    display: table-row-group !important;
+  }
+  tr {
+    display: table-row !important;
+  }
+  th, td {
+    display: table-cell !important;
   }
 
   .print-shadow-none {
     box-shadow: none !important;
-    border: none !important;
-  }
-
-  /* Printable modal / directory layout optimization */
-  .fixed {
-    position: relative !important;
-    background: transparent !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-  }
-
-  .print-container {
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-
-  table {
-    page-break-inside: auto;
-    width: 100% !important;
-  }
-
-  tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
-  }
-
-  /* Remove dark backdrop overlays and blurs when printing */
-  .bg-slate-950\/80, 
-  .bg-slate-900\/80, 
-  .bg-slate-950\/75, 
-  .bg-slate-900\/60, 
-  .backdrop-blur-sm, 
-  .backdrop-blur-xs {
-    background-color: transparent !important;
-    backdrop-filter: none !important;
   }
 }
 

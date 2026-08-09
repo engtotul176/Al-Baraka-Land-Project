@@ -7,6 +7,7 @@ import React, { useRef } from 'react';
 import { Payment, Member, SystemSettings } from '../types';
 import { toBanglaDigits, formatCurrencyBangla, toBanglaWords } from '../utils';
 import { Printer, Share2, CornerDownRight, MessageSquare, Download, CheckSquare } from 'lucide-react';
+import { printElement } from '../utils/printHelper';
 
 interface ReceiptSheetProps {
   payments: Payment[];
@@ -35,7 +36,7 @@ export default function ReceiptSheet({
 
   // Print function
   const handlePrint = () => {
-    window.print();
+    printElement('printable-receipt');
   };
 
   // Generate WhatsApp text and link
@@ -117,6 +118,7 @@ ${settings.orgName}`;
       {activePayment ? (
         <div className="flex justify-center p-2 sm:p-4">
           <div 
+            id="printable-receipt"
             ref={receiptRef}
             className="w-full max-w-[750px] bg-white border-8 border-double border-primary p-6 sm:p-10 rounded-xl relative shadow-md print-shadow-none bg-[radial-gradient(#01322005_1px,transparent_1px)] [background-size:16px_16px]"
           >

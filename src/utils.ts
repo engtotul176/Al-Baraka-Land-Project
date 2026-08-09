@@ -32,7 +32,6 @@ export function getElapsedMonthsFromAugust2026(targetDate: Date = new Date()): n
   const currentYear = targetDate.getFullYear();
   const currentMonth = targetDate.getMonth();
   
-  // If target date is before August 2026, baseline is 1 month (August 2026)
   if (currentYear < startYear || (currentYear === startYear && currentMonth < startMonth)) {
     return 1;
   }
@@ -44,7 +43,7 @@ export function getElapsedMonthsFromAugust2026(targetDate: Date = new Date()): n
 // Backward compatibility alias
 export const getElapsedMonthsFromJuly2026 = getElapsedMonthsFromAugust2026;
 
-// Convert English numbers into English digits or formatted currency (Bangla-themed)
+// Format currency in Bangla theme
 export function formatCurrencyBangla(amount: number): string {
   const formatted = new Intl.NumberFormat('en-IN', {
     minimumFractionDigits: 0,
@@ -71,7 +70,6 @@ export function toBanglaWords(num: number): string {
 
   let words = '';
 
-  // Core divisions in Bengali currency system
   const crore = Math.floor(num / 10000000);
   let remaining = num % 10000000;
 
@@ -194,205 +192,99 @@ export function exportToExcel(
 export function generateGoogleAppsScript(settings: SystemSettings): string {
   return `/**
  * Google Apps Script for "Al-Baraka Smart Management System"
- * This script runs inside Google Sheets and automates:
- * 1. Generating professional PDF Receipts
- * 2. Saving them in a specific Google Drive folder
- * 3. Preparing direct sharing links (e.g., for Whatsapp/Email)
- * 
  * Created for: ${settings.orgName}
  * Founder: ${settings.founderName} (${settings.founderMobile})
  */
-
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('Al-Baraka Automation')
       .addItem('Generate Receipt PDF', 'createReceiptPDF')
-      .addItem('Send WhatsApp Reminder', 'sendWhatsAppReminder')
       .addToUi();
 }
-
-/**
- * Creates a beautiful PDF Receipt from the active Row on "Payments" sheet
- */
-function createReceiptPDF() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Payments");
-  if (!sheet) {
-    SpreadsheetApp.getUi().alert("Error: 'Payments' sheet not found!");
-    return;
-  }
-  
-  var activeCell = sheet.getActiveCell();
-  var row = activeCell.getRow();
-  
-  if (row < 2) {
-    SpreadsheetApp.getUi().alert("Please select a valid payment row (Row 2 or below) to generate a receipt.");
-    return;
-  }
-  
-  // Read row values
-  var data = sheet.getRange(row, 1, 1, 9).getValues()[0];
-  var receiptNo = data[0];
-  var memberId = data[1];
-  var name = data[2];
-  var month = data[3];
-  var year = data[4];
-  var type = data[5];
-  var amount = data[6];
-  var date = Utilities.formatDate(new Date(data[7]), Session.getScriptTimeZone(), "yyyy-MM-dd");
-  var remarks = data[8];
-  
-  if (!receiptNo) {
-    SpreadsheetApp.getUi().alert("Error: Receipt Number is blank in the selected row!");
-    return;
-  }
-  
-  // Try to find or create "Al-Baraka Receipts" folder in Google Drive
-  var folders = DriveApp.getFoldersByName("Al-Baraka Receipts");
-  var folder;
-  if (folders.hasNext()) {
-    folder = folders.next();
-  } else {
-    folder = DriveApp.createFolder("Al-Baraka Receipts");
-  }
-  
-  // Create a template document or construct HTML content
-  var htmlContent = \`
-    <html>
-      <body style="font-family: 'Arial', sans-serif; padding: 20px; color: #111;">
-        <div style="border: 4px double #013220; padding: 20px; max-width: 600px; margin: auto; position: relative;">
-          <!-- Header -->
-          <div style="text-align: center; border-bottom: 2px solid #d4af37; padding-bottom: 15px;">
-            <h2 style="color: #013220; margin: 0; font-size: 24px;">${settings.orgName}</h2>
-            <p style="color: #d4af37; font-style: italic; margin: 5px 0 0 0; font-size: 14px;">${settings.orgSlogan}</p>
-            <p style="margin: 5px 0 0 0; font-size: 12px; color: #555;">ঠিকানা: ${settings.orgAddress} | মোবাইল: ${settings.orgMobile}</p>
-          </div>
-          
-          <div style="text-align: center; margin: 15px 0;">
-            <span style="background-color: #013220; color: white; padding: 5px 15px; font-weight: bold; font-size: 14px; border-radius: 3px;">টাকা প্রাপ্তির রশিদ</span>
-          </div>
-          
-          <!-- Metadata Table -->
-          <table style="width: 100%; font-size: 13px; margin-bottom: 15px; border-collapse: collapse;">
-            <tr>
-              <td style="width: 50%; padding: 4px 0;"><strong>রশিদ নম্বর:</strong> \` + receiptNo + \`</td>
-              <td style="width: 50%; padding: 4px 0; text-align: right;"><strong>তারিখ:</strong> \` + date + \`</td>
-            </tr>
-            <tr>
-              <td style="padding: 4px 0;"><strong>সদস্য আইডি:</strong> \` + memberId + \`</td>
-              <td style="padding: 4px 0; text-align: right;"><strong>পরিশোধের মাস:</strong> \` + month + \` - \` + year + \`</td>
-            </tr>
-            <tr>
-              <td colspan="2" style="padding: 4px 0; border-top: 1px dashed #ddd; padding-top: 8px;"><strong>সদস্যের নাম:</strong> \` + name + \`</td>
-            </tr>
-          </table>
-          
-          <!-- Payment Details -->
-          <table style="width: 100%; border: 1px solid #ddd; border-collapse: collapse; font-size: 13px; margin-bottom: 15px;">
-            <thead>
-              <tr style="background-color: #f5f5f5; border-bottom: 1px solid #ddd;">
-                <th style="padding: 8px; text-align: left;">বিবরণ</th>
-                <th style="padding: 8px; text-align: right;">পরিমাণ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">\` + type + \` (\` + remarks + \`)</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">\` + amount + \` ৳</td>
-              </tr>
-              <tr style="font-weight: bold; border-top: 1px solid #ddd;">
-                <td style="padding: 8px; text-align: right;">সর্বমোট:</td>
-                <td style="padding: 8px; text-align: right; color: #013220;">\` + amount + \` ৳</td>
-              </tr>
-            </tbody>
-          </table>
-          
-          <!-- Bottom Signatures -->
-          <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 15px; display: flex; justify-content: space-between; font-size: 11px;">
-            <div>
-              <div style="height: 40px;"></div>
-              <p style="border-top: 1px solid #aaa; width: 120px; text-align: center; margin: 0;">গ্রাহকের স্বাক্ষর</p>
-            </div>
-            <div style="text-align: right;">
-              <div style="height: 40px; text-align: right;">
-                <p style="font-family: 'Brush Script MT', cursive; font-size: 18px; color: #333; margin:0; padding-right:15px;">${settings.founderName.split(' ').slice(-2).join(' ')}</p>
-              </div>
-              <p style="border-top: 1px solid #aaa; width: 150px; text-align: center; margin: 0; display: inline-block;">আদায়কারীর স্বাক্ষর (${settings.founderName})</p>
-            </div>
-          </div>
-          
-          <div style="text-align: center; font-size: 9px; color: #777; margin-top: 25px; border-top: 1px solid #f0f0f0; padding-top: 5px;">
-            এটি একটি স্বয়ংক্রিয় ডিজিটাল রশিদ। জেনারেট করেছেন: ${settings.founderName}
-          </div>
-        </div>
-      </body>
-    </html>
-  \`;
-  
-  // Create temporary HTML file and convert to PDF
-  var tempFile = DriveApp.createFile("temp_" + receiptNo + ".html", htmlContent, MimeType.HTML);
-  var pdfBlob = tempFile.getAs(MimeType.PDF).setName(receiptNo + "_Receipt.pdf");
-  var pdfFile = folder.createFile(pdfBlob);
-  
-  // Clean up temp file
-  tempFile.setTrashed(true);
-  
-  // Set sharing to anyone with link can view
-  pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  var link = pdfFile.getDownloadUrl();
-  
-  // Record PDF URL back to the Payments Sheet! (e.g. into column 10)
-  sheet.getRange(row, 10).setValue(pdfFile.getUrl());
-  
-  var ui = SpreadsheetApp.getUi();
-  ui.alert("Receipt Generated successfully!\\n\\nReceipt PDF Saved to Drive folder: 'Al-Baraka Receipts'\\nFile Name: " + receiptNo + "_Receipt.pdf\\n\\nShareable Link has been written back to Column J of this row.");
-}
-
-/**
- * Automates creating a WhatsApp direct messaging link for payment alerts
- */
-function sendWhatsAppReminder() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Payments");
-  if (!sheet) return;
-  
-  var activeCell = sheet.getActiveCell();
-  var row = activeCell.getRow();
-  
-  if (row < 2) return;
-  
-  var data = sheet.getRange(row, 1, 1, 10).getValues()[0];
-  var receiptNo = data[0];
-  var name = data[2];
-  var month = data[3];
-  var amount = data[6];
-  var phone = sheet.getRange(row, 5).getValue(); // Assuming phone is stored on Sheet or custom mapped
-  var pdfUrl = data[9] || "No PDF link generated yet";
-  
-  if (!phone) {
-    phone = "01672965561"; // Fallback to founder for testing
-  }
-  
-  // Format phone (remove leading zero, prefix country code)
-  var cleanPhone = phone.toString().replace(/[^0-9+]/g, "");
-  if (cleanPhone.startsWith("0")) {
-    cleanPhone = "88" + cleanPhone;
-  }
-  
-  var msg = "আসসালামু আলাইকুম, শ্রদ্ধেয় " + name + "।\\n" +
-            "আপনার আল-বারাকা ভূমি প্রকল্প এর " + month + " মাসের সঞ্চয় বাবদ " + amount + " ৳ জমা সফল হয়েছে।\\n" +
-            "রশিদ নং: " + receiptNo + "\\n" +
-            "ডিজিটাল রশিদের লিংক: " + pdfUrl + "\\n\\n" +
-            "ধন্যবাদান্তে,\\n${settings.founderName}\\n${settings.orgName}";
-            
-  var encodedMsg = encodeURIComponent(msg);
-  var whatsAppLink = "https://api.whatsapp.com/send?phone=" + cleanPhone + "&text=" + encodedMsg;
-  
-  // Open the Link using Google Apps Script UI or log it
-  var htmlOutput = HtmlService.createHtmlOutput('<script>window.open("' + whatsAppLink + '", "_blank");google.script.host.close();</script>')
-      .setWidth(10)
-      .setHeight(10);
-  SpreadsheetApp.getUi().showModalDialog(htmlOutput, "Launching WhatsApp...");
-}
 `;
+}
+
+/**
+ * Unified handlePrint utility function that targets the print element ID 
+ * and ensures it becomes visible in the DOM during the print window lifecycle.
+ */
+export function handlePrint(elementId: string) {
+  const el = document.getElementById(elementId);
+  if (!el) {
+    window.print();
+    return;
+  }
+
+  // Ensure element becomes visible in DOM
+  const originalDisplay = el.style.display;
+  const originalVisibility = el.style.visibility;
+
+  el.style.display = 'block';
+  el.style.visibility = 'visible';
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  iframe.style.visibility = 'hidden';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    window.print();
+    iframe.remove();
+    el.style.display = originalDisplay;
+    el.style.visibility = originalVisibility;
+    return;
+  }
+
+  const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+    .map(s => s.outerHTML)
+    .join('\n');
+
+  doc.open();
+  doc.write(
+    '<!DOCTYPE html>' +
+    '<html lang="bn">' +
+    '<head>' +
+    '<meta charset="utf-8" />' +
+    '<title>Print Document</title>' +
+    styles +
+    '<style>' +
+    '@page { size: A4 portrait; margin: 10mm; }' +
+    '*, *::before, *::after { visibility: visible !important; }' +
+    'html, body { background: #ffffff !important; color: #0f172a !important; margin: 0 !important; padding: 0 !important; font-family: "Hind Siliguri", "Inter", system-ui, sans-serif !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
+    'body { padding: 12px !important; }' +
+    '.no-print, button, input, select { display: none !important; }' +
+    '#' + elementId + ', .print-container { display: block !important; visibility: visible !important; width: 100% !important; margin: 0 !important; background: #ffffff !important; }' +
+    'table { width: 100% !important; border-collapse: collapse !important; }' +
+    'th, td { border: 1px solid #cbd5e1 !important; }' +
+    '</style>' +
+    '</head>' +
+    '<body>' +
+    '<div id="' + elementId + '" class="' + (el.className || '') + ' print-container">' +
+    el.innerHTML +
+    '</div>' +
+    '</body>' +
+    '</html>'
+  );
+  doc.close();
+
+  setTimeout(() => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch {
+      window.print();
+    } finally {
+      setTimeout(() => {
+        iframe.remove();
+        el.style.display = originalDisplay;
+        el.style.visibility = originalVisibility;
+      }, 1000);
+    }
+  }, 400);
 }

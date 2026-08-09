@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { BankDeposit, BankWithdrawal, ExpenseEntry, Payment, ExpenseCategory, SystemSettings } from '../types';
 import { toBanglaDigits, formatCurrencyBangla, toBanglaWords } from '../utils';
+import { printElement } from '../utils/printHelper';
 import { 
   Landmark, 
   ArrowRight, 
@@ -1681,7 +1682,7 @@ export default function BankDepositSheet({
               </span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => printElement('printable-deposit-slip')}
                   className="px-4 py-2 bg-primary hover:bg-primary-light text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer border-0"
                 >
                   <Printer size={14} /> প্রিন্ট করুন / PDF
@@ -1831,7 +1832,7 @@ export default function BankDepositSheet({
               </span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => printElement('printable-bank-statement')}
                   className="px-4 py-2 bg-primary hover:bg-primary-light text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer border-0"
                 >
                   <Printer size={14} /> প্রিন্ট করুন / PDF ডাউনলোড

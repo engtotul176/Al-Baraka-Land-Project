@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Member } from '../types';
 import { toBanglaDigits } from '../utils';
 import { Search, UserPlus, Edit2, Check, X, ShieldAlert, FileSpreadsheet, Eye, Trash2, Printer, Users } from 'lucide-react';
+import { printElement } from '../utils/printHelper';
 
 interface MembersSheetProps {
   members: Member[];
@@ -651,7 +652,7 @@ export default function MembersSheet({
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => printElement('printable-directory')}
                   className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow"
                 >
                   <Printer size={15} />
@@ -668,7 +669,7 @@ export default function MembersSheet({
             </div>
 
             {/* Printable Document Area */}
-            <div className="p-6 md:p-8 bg-white text-slate-900 space-y-5 print-container">
+            <div id="printable-directory" className="p-6 md:p-8 bg-white text-slate-900 space-y-5 print-container">
               {/* Document Header */}
               <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight">

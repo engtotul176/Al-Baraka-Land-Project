@@ -8,6 +8,7 @@ import { Member, Payment, SystemSettings } from '../types';
 import { toBanglaDigits, formatCurrencyBangla, getElapsedMonthsFromJuly2026 } from '../utils';
 import { FileText, Printer, CheckCircle, AlertTriangle, Landmark, Compass, Eye, Edit2, Trash2 } from 'lucide-react';
 import EditPaymentModal from './EditPaymentModal';
+import { printElement } from '../utils/printHelper';
 
 interface MemberLedgerSheetProps {
   members: Member[];
@@ -84,7 +85,7 @@ export default function MemberLedgerSheet({
 
   // Print ledger handler
   const handlePrint = () => {
-    window.print();
+    printElement('printable-ledger');
   };
 
   return (
@@ -135,7 +136,7 @@ export default function MemberLedgerSheet({
       </div>
 
       {activeMember ? (
-        <div className="space-y-6 print-shadow-none">
+        <div id="printable-ledger" className="space-y-6 print-shadow-none">
           {/* Printable Individual Ledger Cover */}
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6 print-shadow-none">
             {/* Print Specific Header */}
