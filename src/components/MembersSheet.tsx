@@ -668,7 +668,7 @@ export default function MembersSheet({
             </div>
 
             {/* Printable Document Area */}
-            <div id="printable-directory" className="p-6 md:p-8 bg-white text-slate-900 space-y-5 print-container">
+            <div className="p-6 md:p-8 bg-white text-slate-900 space-y-5 print-container">
               {/* Document Header */}
               <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight">

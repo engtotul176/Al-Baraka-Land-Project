@@ -135,7 +135,7 @@ export default function MemberLedgerSheet({
       </div>
 
       {activeMember ? (
-        <div id="printable-ledger" className="space-y-6 print-shadow-none">
+        <div className="space-y-6 print-shadow-none">
           {/* Printable Individual Ledger Cover */}
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6 print-shadow-none">
             {/* Print Specific Header */}

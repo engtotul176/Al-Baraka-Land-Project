@@ -117,7 +117,6 @@ ${settings.orgName}`;
       {activePayment ? (
         <div className="flex justify-center p-2 sm:p-4">
           <div 
-            id="printable-receipt"
             ref={receiptRef}
             className="w-full max-w-[750px] bg-white border-8 border-double border-primary p-6 sm:p-10 rounded-xl relative shadow-md print-shadow-none bg-[radial-gradient(#01322005_1px,transparent_1px)] [background-size:16px_16px]"
           >
