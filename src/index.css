@@ -49,6 +49,17 @@ body {
     display: none !important;
   }
 
+  /* Reset fixed modal overlays so print documents render full page on white background */
+  .fixed.inset-0 {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
   /* Ensure print containers and children are fully visible */
   .print-container,
   #printable-bank-statement,

@@ -215,21 +215,24 @@ export function handlePrint(elementId: string) {
     return;
   }
 
-  // Ensure element becomes visible in DOM
+  // Preserve original display and visibility
   const originalDisplay = el.style.display;
   const originalVisibility = el.style.visibility;
 
   el.style.display = 'block';
   el.style.visibility = 'visible';
 
+  // Create an offscreen iframe with standard non-zero dimensions (A4 printable width)
+  // so the browser print engine computes layout, flex, grid, and table widths properly.
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  iframe.style.visibility = 'hidden';
+  iframe.style.left = '-9999px';
+  iframe.style.top = '0';
+  iframe.style.width = '1000px';
+  iframe.style.height = '1400px';
+  iframe.style.border = 'none';
+  iframe.style.opacity = '0';
+  iframe.style.pointerEvents = 'none';
   document.body.appendChild(iframe);
 
   const doc = iframe.contentWindow?.document;
@@ -251,15 +254,18 @@ export function handlePrint(elementId: string) {
     '<html lang="bn">' +
     '<head>' +
     '<meta charset="utf-8" />' +
-    '<title>Print Document</title>' +
+    '<title>প্রিন্ট ডকুমেন্ট</title>' +
+    '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">' +
     styles +
     '<style>' +
     '@page { size: A4 portrait; margin: 10mm; }' +
-    '*, *::before, *::after { visibility: visible !important; }' +
-    'html, body { background: #ffffff !important; color: #0f172a !important; margin: 0 !important; padding: 0 !important; font-family: "Hind Siliguri", "Inter", system-ui, sans-serif !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
+    '*, *::before, *::after { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
+    'html, body { background: #ffffff !important; color: #0f172a !important; margin: 0 !important; padding: 0 !important; font-family: "Hind Siliguri", "Inter", system-ui, sans-serif !important; width: 100% !important; min-height: 100% !important; }' +
     'body { padding: 12px !important; }' +
-    '.no-print, button, input, select { display: none !important; }' +
-    '#' + elementId + ', .print-container { display: block !important; visibility: visible !important; width: 100% !important; margin: 0 !important; background: #ffffff !important; }' +
+    '.no-print, button, input, select, nav, header, footer { display: none !important; }' +
+    '#' + elementId + ', .print-container { display: block !important; visibility: visible !important; width: 100% !important; margin: 0 !important; background: #ffffff !important; box-shadow: none !important; border: none !important; }' +
     'table { width: 100% !important; border-collapse: collapse !important; }' +
     'th, td { border: 1px solid #cbd5e1 !important; }' +
     '</style>' +
@@ -277,14 +283,17 @@ export function handlePrint(elementId: string) {
     try {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
-    } catch {
+    } catch (err) {
+      console.error('Iframe print error, invoking window.print():', err);
       window.print();
     } finally {
       setTimeout(() => {
-        iframe.remove();
+        try {
+          iframe.remove();
+        } catch {}
         el.style.display = originalDisplay;
         el.style.visibility = originalVisibility;
-      }, 1000);
+      }, 1500);
     }
-  }, 400);
+  }, 500);
 }
