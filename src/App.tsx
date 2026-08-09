@@ -48,6 +48,7 @@ import GoogleAppsScriptSheet from './components/GoogleAppsScriptSheet';
 import ManualSheet from './components/ManualSheet';
 import SettingsSheet from './components/SettingsSheet';
 import NoticeAndCommitteeSheet from './components/NoticeAndCommitteeSheet';
+import SmsPanelSheet from './components/SmsPanelSheet';
 import TickerBanner, { TickerItem } from './components/TickerBanner';
 import PopUpNoticeModal, { PopUpNoticeData } from './components/PopUpNoticeModal';
 
@@ -66,7 +67,8 @@ import {
   Download, 
   Info,
   Calendar,
-  Megaphone
+  Megaphone,
+  MessageSquare
 } from 'lucide-react';
 
 export default function App() {
@@ -909,6 +911,7 @@ export default function App() {
     { id: 'bank', name: 'ব্যাংক ডিপোজিট', icon: Landmark, color: 'border-b-blue-700' },
     { id: 'ledger', name: 'সদস্য খতিয়ান', icon: FileText, color: 'border-b-purple-700' },
     { id: 'reports', name: 'আর্থিক রিপোর্ট', icon: FileChartLine, color: 'border-b-indigo-700' },
+    { id: 'sms', name: 'এসএমএস সার্ভিস', icon: MessageSquare, color: 'border-b-emerald-600' },
     { id: 'script', name: 'গুগল স্ক্রিপ্ট', icon: FileCode, color: 'border-b-teal-700' },
     { id: 'manual', name: 'ব্যবহারকারী গাইড', icon: FileQuestion, color: 'border-b-amber-700' },
     { id: 'settings', name: 'সেটিংস', icon: Settings, color: 'border-b-slate-700' }
@@ -1289,6 +1292,16 @@ export default function App() {
               isAdmin={isAdmin}
               onDeletePayment={handleDeletePayment}
               onUpdatePayment={handleUpdatePayment}
+            />
+          )}
+
+          {activeTab === 'sms' && (
+            <SmsPanelSheet
+              members={members}
+              payments={payments}
+              settings={settings}
+              onUpdateSettings={handleUpdateSettings}
+              isAdmin={isAdmin}
             />
           )}
 

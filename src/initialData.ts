@@ -419,5 +419,10 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   firebaseMessagingSenderId: "",
   firebaseAppId: "",
   firebaseSyncEnabled: false,
-  adminPin: "1234"
+  adminPin: "1234",
+  smsApiKey: "SSUCS5sjSU4MFQZcJT8c",
+  smsSenderId: "8809648909593",
+  smsApiUrl: "https://bulksmsbd.net/api/smsapi",
+  smsAutoSendOnPayment: true,
+  smsTemplate: "সম্মানিত সদস্য {memberName}, আল-বারাকা ভূমি প্রকল্প এ {month}-এর {amount} টাকা জমা হয়েছে। রশিদ: {receiptNo}। আপনার মোট জমার পরিমাণ: {totalSavings} টাকা। ধন্যবাদ!"
 };

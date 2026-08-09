@@ -23,7 +23,8 @@ import {
   HelpCircle, 
   Key, 
   Lock,
-  Users
+  Users,
+  MessageSquare
 } from 'lucide-react';
 
 interface SettingsSheetProps {
@@ -399,6 +400,53 @@ export default function SettingsSheet({
                 disabled={!isAdmin}
                 title={isAdmin ? "পিন কোড পরিবর্তন করতে পারবেন" : "পিন পরিবর্তন করতে অনুগ্রহ করে এডমিন মোড আনলক করুন"}
               />
+            </div>
+          </div>
+
+          {/* BulkSMSBD SMS Integration Card */}
+          <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 space-y-3">
+            <h3 className="font-bold text-sm text-emerald-900 flex items-center gap-1.5 border-b border-emerald-200/60 pb-2">
+              <MessageSquare size={16} className="text-amber-500 shrink-0" />
+              BulkSMSBD এসএমএস সেটিংস (SMS API Settings)
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">API Key*</label>
+                <input
+                  type="text"
+                  value={settings.smsApiKey || ''}
+                  onChange={(e) => handleChange('smsApiKey', e.target.value.trim())}
+                  placeholder="SSUCS5sjSU4MFQZcJT8c"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-mono font-bold bg-white"
+                  disabled={!isAdmin}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Sender ID*</label>
+                <input
+                  type="text"
+                  value={settings.smsSenderId || ''}
+                  onChange={(e) => handleChange('smsSenderId', e.target.value.trim())}
+                  placeholder="8809648909593"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-mono font-bold bg-white"
+                  disabled={!isAdmin}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={settings.smsAutoSendOnPayment !== false}
+                  onChange={(e) => handleChange('smsAutoSendOnPayment', e.target.checked)}
+                  className="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                  disabled={!isAdmin}
+                />
+                পেমেন্ট এন্ট্রিতে অটোমেটিক বাংলা এসএমএস পাঠান
+              </label>
             </div>
           </div>
 

@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Member, Payment, PaymentType, SystemSettings } from '../types';
 import { toBanglaDigits, formatCurrencyBangla, generateNextReceiptNo } from '../utils';
+import { sendSms, formatPaymentSmsMessage } from '../utils/smsService';
 import { BadgeCheck, Receipt, AlertTriangle, ArrowRight, CornerDownRight, CheckCircle2 } from 'lucide-react';
 
 interface PaymentEntrySheetProps {
@@ -166,9 +167,35 @@ export default function PaymentEntrySheet({
 
     onAddPayment(payload);
     
+    // Auto SMS notification triggering if enabled
+    let smsNotificationNote = "";
+    if (settings.smsAutoSendOnPayment !== false && selectedMember && selectedMember.mobile) {
+      const memberPayments = payments.filter(p => p.memberId === selectedMember.memberId);
+      const newTotalSavings = memberPayments.reduce((sum, p) => sum + p.amount, 0) + Number(amount);
+
+      const smsText = formatPaymentSmsMessage(settings.smsTemplate, {
+        memberName: selectedMember.name,
+        month: selectedMonth,
+        year: selectedYear,
+        amount: Number(amount),
+        receiptNo,
+        totalSavings: newTotalSavings
+      });
+
+      sendSms(selectedMember.mobile, smsText, settings, selectedMember.name, 'auto_payment')
+        .then((res) => {
+          console.log('Auto SMS response:', res);
+        })
+        .catch((err) => {
+          console.warn('Auto SMS trigger error:', err);
+        });
+
+      smsNotificationNote = "\n📱 মেম্বারের মোবাইলে অটোমেটিক নিশ্চিতকরণ এসএমএস পাঠানো হয়েছে!";
+    }
+
     // Auto trigger success and view receipt
     onSelectReceipt(receiptNo);
-    alert(`পেমেন্ট সফলভাবে এন্ট্রি করা হয়েছে!\nরশিদ নং: ${receiptNo}\n\nএখন রশিদটি প্রিন্ট বা শেয়ার করতে পারবেন।`);
+    alert(`পেমেন্ট সফলভাবে এন্ট্রি করা হয়েছে!\nরশিদ নং: ${receiptNo}${smsNotificationNote}\n\nএখন রশিদটি প্রিন্ট বা শেয়ার করতে পারবেন।`);
     onSelectTab('receipt');
   };
 

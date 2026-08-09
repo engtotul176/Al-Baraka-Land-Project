@@ -117,6 +117,22 @@ export interface SystemSettings {
   firebaseAppId?: string;
   firebaseSyncEnabled?: boolean;
   adminPin?: string;
+  smsApiKey?: string;
+  smsSenderId?: string;
+  smsApiUrl?: string;
+  smsAutoSendOnPayment?: boolean;
+  smsTemplate?: string;
+}
+
+export interface SmsLog {
+  id: string;
+  recipientName: string;
+  mobile: string;
+  message: string;
+  status: 'sent' | 'failed' | 'pending';
+  responseMessage?: string;
+  sentAt: string;
+  type: 'auto_payment' | 'manual' | 'test' | 'bulk';
 }
 
 export interface UserSession {
