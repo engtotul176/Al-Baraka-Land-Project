@@ -8,7 +8,7 @@ import { Member, Payment, BankDeposit, BankWithdrawal, ExpenseEntry, UserSession
 import { toBanglaDigits, formatCurrencyBangla, getTodayBanglaDate } from '../utils';
 import { 
   Users, Landmark, Wallet, Layers, AlertCircle, ArrowUpRight, TrendingUp, Calendar, BadgeCheck, Receipt,
-  Activity, Eye, Radio, Clock, Laptop, Smartphone, X, ShieldCheck
+  Activity, Eye, Radio, Clock, Laptop, Smartphone, X, ShieldCheck, Lock, Info, Plus, Equal, CheckCircle2
 } from 'lucide-react';
 
 interface DashboardSheetProps {
@@ -100,6 +100,18 @@ export default function DashboardSheet({
 
   // Total Expenses
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // FDR Balance Calculation (FDR is a safe investment asset, not an expense)
+  const fdrFromWithdrawals = bankWithdrawals
+    .filter(w => w.withdrawPurpose === 'FDR Investment')
+    .reduce((sum, w) => sum + w.amount, 0);
+  const fdrFromExpenses = expenses
+    .filter(e => e.category === 'FDR')
+    .reduce((sum, e) => sum + e.amount, 0);
+  const totalFDRBalance = fdrFromWithdrawals + fdrFromExpenses;
+
+  // Total Current Project Fund = Net Bank Balance + FDR Balance + Cash in Hand
+  const totalCurrentFund = netBankBalance + totalFDRBalance + cashInHand;
 
   // Current Month Collection dynamically calculated based on actual current date
   const now = new Date();
@@ -271,60 +283,165 @@ export default function DashboardSheet({
       )}
 
       {/* Primary KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
         {/* Metric 1: Total Members */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
+        <div className="bg-white p-4.5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-slate-500">মোট সদস্য সংখ্যা</p>
-            <p className="text-2xl font-bold text-primary">{toBanglaDigits(totalMembers)} জন</p>
-            <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+            <p className="text-xs font-semibold text-slate-500">মোট সদস্য সংখ্যা</p>
+            <p className="text-xl md:text-2xl font-bold text-primary">{toBanglaDigits(totalMembers)} জন</p>
+            <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               সক্রিয়: {toBanglaDigits(activeMembers)} জন
             </p>
           </div>
-          <div className="p-3.5 bg-emerald-50 rounded-xl text-primary group-hover:scale-110 transition-transform duration-300">
-            <Users size={24} />
+          <div className="p-3 bg-emerald-50 rounded-xl text-primary group-hover:scale-110 transition-transform duration-300">
+            <Users size={22} />
           </div>
         </div>
 
         {/* Metric 2: Total Collection */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
+        <div className="bg-white p-4.5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-slate-500">সর্বমোট আদায় (তহবিল)</p>
-            <p className="text-2xl font-bold text-primary font-mono">{formatCurrencyBangla(totalCollection)}</p>
-            <p className="text-xs text-slate-400">নিবন্ধিত সকল সদস্যের জমার সমষ্টি</p>
+            <p className="text-xs font-semibold text-slate-500">সর্বমোট আদায় (তহবিল)</p>
+            <p className="text-xl md:text-2xl font-bold text-primary font-mono">{formatCurrencyBangla(totalCollection)}</p>
+            <p className="text-[11px] text-slate-400">মোট সদস্য সঞ্চয়ের সমষ্টি</p>
           </div>
-          <div className="p-3.5 bg-emerald-50 rounded-xl text-primary group-hover:scale-110 transition-transform duration-300">
-            <TrendingUp size={24} className="text-emerald-700" />
+          <div className="p-3 bg-emerald-50 rounded-xl text-primary group-hover:scale-110 transition-transform duration-300">
+            <TrendingUp size={22} className="text-emerald-700" />
           </div>
         </div>
 
         {/* Metric 3: Bank Balance */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
+        <div className="bg-white p-4.5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-slate-500">বর্তমান ব্যাংক ব্যালেন্স</p>
-            <p className="text-2xl font-bold text-emerald-800 font-mono">{formatCurrencyBangla(netBankBalance)}</p>
+            <p className="text-xs font-semibold text-slate-500">বর্তমান ব্যাংক ব্যালেন্স</p>
+            <p className="text-xl md:text-2xl font-bold text-emerald-800 font-mono">{formatCurrencyBangla(netBankBalance)}</p>
             <button 
               onClick={() => onSelectTab('bank')}
-              className="text-xs text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-1 mt-1 cursor-pointer"
+              className="text-[11px] text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-1 mt-0.5 cursor-pointer"
             >
-              ব্যাংক & চেক রেজিস্টার <ArrowUpRight size={12} />
+              ব্যাংক একাউন্টে নগদ <ArrowUpRight size={11} />
             </button>
           </div>
-          <div className="p-3.5 bg-blue-50 rounded-xl text-blue-700 group-hover:scale-110 transition-transform duration-300">
-            <Landmark size={24} />
+          <div className="p-3 bg-blue-50 rounded-xl text-blue-700 group-hover:scale-110 transition-transform duration-300">
+            <Landmark size={22} />
           </div>
         </div>
 
-        {/* Metric 4: Cash in Hand */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
+        {/* Metric 4: FDR Balance */}
+        <div className="bg-white p-4.5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-slate-500">হাতে নগদ অবশিষ্ট ফান্ড</p>
-            <p className="text-2xl font-bold text-amber-700 font-mono">{formatCurrencyBangla(cashInHand)}</p>
-            <p className="text-xs text-slate-400">ক্যাশ ইন হ্যান্ড অবশিষ্ট স্থিতি</p>
+            <p className="text-xs font-semibold text-slate-500">ব্যাংক স্থায়ী আমানত (FDR)</p>
+            <p className="text-xl md:text-2xl font-bold text-indigo-800 font-mono">{formatCurrencyBangla(totalFDRBalance)}</p>
+            <button 
+              onClick={() => onSelectTab('bank')}
+              className="text-[11px] text-indigo-700 hover:text-indigo-900 font-medium flex items-center gap-1 mt-0.5 cursor-pointer"
+            >
+              সংরক্ষিত স্থায়ী অর্থ <ArrowUpRight size={11} />
+            </button>
           </div>
-          <div className="p-3.5 bg-amber-50 rounded-xl text-amber-700 group-hover:scale-110 transition-transform duration-300">
-            <Wallet size={24} />
+          <div className="p-3 bg-indigo-50 rounded-xl text-indigo-700 group-hover:scale-110 transition-transform duration-300">
+            <Lock size={22} />
+          </div>
+        </div>
+
+        {/* Metric 5: Cash in Hand */}
+        <div className="bg-white p-4.5 rounded-2xl shadow-sm border border-slate-100 hover:border-gold transition-all duration-300 flex items-center justify-between group">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-slate-500">হাতে নগদ অবশিষ্ট ফান্ড</p>
+            <p className="text-xl md:text-2xl font-bold text-amber-700 font-mono">{formatCurrencyBangla(cashInHand)}</p>
+            <p className="text-[11px] text-slate-400">ক্যাশ ইন হ্যান্ড অবশিষ্ট স্থিতি</p>
+          </div>
+          <div className="p-3 bg-amber-50 rounded-xl text-amber-700 group-hover:scale-110 transition-transform duration-300">
+            <Wallet size={22} />
+          </div>
+        </div>
+      </div>
+
+      {/* Fund Allocation & Clarity Breakdown Section (তহবিলের অবস্থান ও সমীকরণ) */}
+      <div className="bg-gradient-to-br from-slate-900 via-primary to-slate-950 text-white p-5 rounded-2xl shadow-md border border-slate-700/60 relative overflow-hidden">
+        <div className="relative z-10 space-y-4">
+          {/* Header Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 bg-gold/20 text-gold rounded-lg border border-gold/30">
+                <ShieldCheck size={18} />
+              </span>
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2 font-sans">
+                  প্রকল্প তহবিলের অবস্থান ও স্বচ্ছ হিসাব (Fund Status Breakdown)
+                </h3>
+                <p className="text-xs text-slate-300">
+                  ব্যাংক, এফডিআর ও নগদ ক্যাশের সমন্বিত হিসাব
+                </p>
+              </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/20 flex items-center gap-2 self-start sm:self-auto">
+              <span className="text-xs text-gold-light font-semibold">মোট বর্তমান তহবিল:</span>
+              <span className="text-base font-black font-mono text-gold">{formatCurrencyBangla(totalCurrentFund)}</span>
+            </div>
+          </div>
+
+          {/* Visual Equation Breakdown Bar */}
+          <div className="grid grid-cols-1 md:grid-cols-7 items-center gap-2 bg-white/5 backdrop-blur-sm p-3.5 rounded-xl border border-white/10">
+            {/* Part 1: Bank Balance */}
+            <div className="md:col-span-2 bg-blue-950/60 border border-blue-500/30 rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-blue-300 font-semibold mb-1">
+                <Landmark size={14} /> ব্যাংকে ব্যালেন্স
+              </div>
+              <p className="text-lg font-bold font-mono text-blue-100">{formatCurrencyBangla(netBankBalance)}</p>
+            </div>
+
+            {/* Plus Operator */}
+            <div className="flex justify-center text-slate-400">
+              <span className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gold font-bold text-sm">
+                +
+              </span>
+            </div>
+
+            {/* Part 2: FDR Balance */}
+            <div className="md:col-span-1 bg-indigo-950/60 border border-indigo-500/30 rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-indigo-300 font-semibold mb-1">
+                <Lock size={14} /> FDR-এ সংরক্ষিত
+              </div>
+              <p className="text-lg font-bold font-mono text-indigo-100">{formatCurrencyBangla(totalFDRBalance)}</p>
+            </div>
+
+            {/* Plus Operator */}
+            <div className="flex justify-center text-slate-400">
+              <span className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gold font-bold text-sm">
+                +
+              </span>
+            </div>
+
+            {/* Part 3: Cash in Hand */}
+            <div className="md:col-span-1 bg-amber-950/60 border border-amber-500/30 rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-amber-300 font-semibold mb-1">
+                <Wallet size={14} /> হাতে নগদ
+              </div>
+              <p className="text-lg font-bold font-mono text-amber-100">{formatCurrencyBangla(cashInHand)}</p>
+            </div>
+
+            {/* Equal Operator & Total Fund */}
+            <div className="md:col-span-1 bg-emerald-950/80 border border-emerald-500/50 rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-300 font-semibold mb-1">
+                <CheckCircle2 size={14} /> মোট তহবিল
+              </div>
+              <p className="text-lg font-black font-mono text-emerald-200">{formatCurrencyBangla(totalCurrentFund)}</p>
+            </div>
+          </div>
+
+          {/* Simple Reassuring Information Note */}
+          <div className="bg-amber-500/15 border border-amber-400/30 rounded-xl p-3 text-amber-100 flex items-start gap-2.5">
+            <Info size={18} className="text-gold shrink-0 mt-0.5" />
+            <div className="text-xs leading-relaxed space-y-1">
+              <p className="font-bold text-gold">
+                ℹ️ ব্যাংক ব্যালেন্স কম দেখালেও চিন্তার কারণ নেই। FDR-এ স্থানান্তরিত অর্থ মোট তহবিলের অন্তর্ভুক্ত।
+              </p>
+              <p className="text-slate-300 text-[11px]">
+                FDR কোনো খরচ (Expense) নয়—এটি প্রকল্পের নিরাপদ স্থায়ী আমানত সম্পদ। ব্যাংকের মূল একাউন্ট থেকে টাকা নিরাপদ FDR স্কিমে স্থানান্তরিত হলেও প্রকল্পের মোট তহবিল এবং সর্বমোট আদায় সম্পূর্ণ সুরক্ষিত থাকে।
+              </p>
+            </div>
           </div>
         </div>
       </div>
